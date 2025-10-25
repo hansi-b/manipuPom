@@ -48,7 +48,7 @@ From the repository root you can run the script directly. The CLI
 signature is:
 
 ```
-python3 src/parse_pom.py <pom-path> [artifactId ...] [--write]
+python3 src/parse_pom.py <pom-path> [removeDeps ...] [--write]
 ```
 
 Examples:

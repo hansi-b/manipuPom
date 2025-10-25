@@ -27,6 +27,20 @@ def _qn(local: str, ns: str | None) -> str:
     """Qualified name helper: returns '{ns}local' when ns is set, else 'local'."""
     return f"{{{ns}}}{local}" if ns else local
 
+def handle_remove_deps(pom_root: ET.Element, requested: Iterable[str]):
+    """
+    If artifacts to remove were passed, verify they're present then remove matching dependencies
+    """
+    present = find_artifactids(pom_root)
+    missing = requested - present
+    if missing:
+        print(f"Error: specified artifactIds not found in POM: {', '.join(sorted(missing))}", file=sys.stderr)
+        # Do not modify or write anything if a requested dependency is missing
+        sys.exit(1)
+
+    removed = remove_dependencies(pom_root, requested)
+    print(f"Removed {removed} matching dependencies", flush=True)
+
 
 def remove_dependencies(root: ET.Element, artifact_names: Iterable[str]) -> int:
     """
@@ -59,7 +73,7 @@ def find_artifactids(root: ET.Element) -> set:
 def parse_args():
     p = argparse.ArgumentParser(description='Remove dependencies from a pom.xml by artifactId')
     p.add_argument('pom', help='path to pom.xml (required positional)')
-    p.add_argument('artifactIds', nargs='*', help='artifactId words to remove from dependencies')
+    p.add_argument('removeDeps', nargs='*', help='artifactId words to remove from dependencies')
     p.add_argument('--write', '-w', action='store_true', help='overwrite the input pom with the modified XML (a .bak copy will be created)')
     return p.parse_args()
 
@@ -68,18 +82,8 @@ if __name__ == "__main__":
     pom_path = args.pom
     pom_root = read_pom(pom_path)
 
-    # If artifactIds were passed, verify they're present then remove matching dependencies
-    if args.artifactIds:
-        requested = set(args.artifactIds)
-        present = find_artifactids(pom_root)
-        missing = requested - present
-        if missing:
-            print(f"Error: specified artifactIds not found in POM: {', '.join(sorted(missing))}", file=sys.stderr)
-            # Do not modify or write anything if a requested dependency is missing
-            sys.exit(1)
-
-        removed = remove_dependencies(pom_root, requested)
-        print(f"Removed {removed} matching dependencies", flush=True)
+    if args.removeDeps:
+        handle_remove_deps(pom_root, set(args.removeDeps))
 
     # Register the root's namespace as the default namespace so ElementTree
     # writes a single xmlns="..." on the root instead of repeated xmlns:prefix
