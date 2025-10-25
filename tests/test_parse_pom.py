@@ -52,6 +52,31 @@ def test_remove_dependencies_removes_by_artifactid(tmp_path):
     assert remaining == []
 
 
+def test_change_dependency_scopes(tmp_path):
+    """Test changing and adding dependency scopes"""
+    # copy the data pom to a temporary file so tests don't mutate repo files
+    tmp_pom = tmp_path / 'pom.xml'
+    shutil.copy2(TEST_POM, tmp_pom)
+
+    root = pp.read_pom(str(tmp_pom))
+    ns = pp._get_default_namespace(root)
+    qn = lambda local: f"{{{ns}}}{local}" if ns else local
+
+    # Test both changing an existing scope and adding a new one
+    scope_changes = ["testng:test", "selenium-java:provided"]
+    modified = pp.change_dependency_scopes(root, scope_changes)
+    assert modified == 2
+
+    # Verify the changes
+    for deps_container in root.findall('.//' + qn('dependencies')):
+        for dep in deps_container.findall(qn('dependency')):
+            art = dep.find(qn('artifactId'))
+            scope = dep.find(qn('scope'))
+            if art.text == 'testng':
+                assert scope is not None and scope.text == 'test'
+            elif art.text == 'selenium-java':
+                assert scope is not None and scope.text == 'provided'
+
 def test_script_fails_on_missing_dependency(tmp_path):
     """Verify the script fails with exit code 1 when a requested artifactId doesn't exist."""
     # copy test POM to a temporary location so we don't modify the original

@@ -23,6 +23,7 @@ This repository contains:
   declarations on child elements).
 - Remove `<dependency>` entries by passing one or more `artifactId`
   values on the command line.
+- Change dependency `<scope>` using `--scope artifactId:newScope` format.
 - Optionally overwrite the original POM; a `.bak` copy is always
   created before overwriting.
 
@@ -48,7 +49,7 @@ From the repository root you can run the script directly. The CLI
 signature is:
 
 ```
-python3 src/parse_pom.py <pom-path> [removeDeps ...] [--write]
+python3 src/parse_pom.py <pom-path> [removeDeps ...] [--write] [--scope ARTIFACT:SCOPE ...]
 ```
 
 Examples:
@@ -70,6 +71,12 @@ python3 src/parse_pom.py someProject/pom.xml htmlcleaner jxl
 
 ```bash
 python3 src/parse_pom.py someProject/pom.xml htmlcleaner jxl --write
+```
+
+- Change dependency scopes (can be combined with removal):
+
+```bash
+python3 src/parse_pom.py someProject/pom.xml --scope junit:test lombok:provided
 ```
 
 Notes about behavior
