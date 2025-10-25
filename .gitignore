@@ -1,0 +1,41 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+env/
+.env
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# Backups (created by this script)
+*.bak
+*.orig
+
+# Logs
+*.log
+
+# Mypy / other caches
+.mypy_cache/
+.pyre/
+__pypackages__/
