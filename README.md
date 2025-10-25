@@ -5,12 +5,12 @@ Small utility to read and modify a Maven `pom.xml` using Python's
 
 This repository contains:
 
-- `src/parse_pom.py` — the main script. It can print a POM, remove
+- `src/mod_deps.py` — the main script. It can print a POM, remove
   dependencies by `artifactId`, and optionally write changes back to the
   POM file. When writing, the script will automatically create a
   `.bak` backup of the original file.
 - `tests/data/pom.xml` — an example Maven POM used by the test suite.
-- `tests/test_parse_pom.py` — pytest-based unit tests for namespace
+- `tests/test_mod_deps.py` — pytest-based unit tests for namespace
   detection and dependency removal.
 - `requirements-dev.txt` — development/test dependencies (currently
   contains `pytest`).
@@ -49,7 +49,7 @@ From the repository root you can run the script directly. The CLI
 signature is:
 
 ```
-python3 src/parse_pom.py <pom-path> [removeDeps ...] [--write] [--scope ARTIFACT:SCOPE ...]
+python3 src/mod_deps.py <pom-path> [removeDeps ...] [--write] [--scope ARTIFACT:SCOPE ...]
 ```
 
 Examples:
@@ -57,26 +57,26 @@ Examples:
 - Print a POM in `someProject` (no changes):
 
 ```bash
-python3 src/parse_pom.py someProject/pom.xml
+python3 src/mod_deps.py someProject/pom.xml
 ```
 
 - Remove dependencies by `artifactId` and print the modified POM:
 
 ```bash
-python3 src/parse_pom.py someProject/pom.xml htmlcleaner jxl
+python3 src/mod_deps.py someProject/pom.xml htmlcleaner jxl
 ```
 
 - Remove dependencies and overwrite the POM (a `.bak` copy will be
   created automatically):
 
 ```bash
-python3 src/parse_pom.py someProject/pom.xml htmlcleaner jxl --write
+python3 src/mod_deps.py someProject/pom.xml htmlcleaner jxl --write
 ```
 
 - Change dependency scopes (can be combined with removal):
 
 ```bash
-python3 src/parse_pom.py someProject/pom.xml --scope junit:test lombok:provided
+python3 src/mod_deps.py someProject/pom.xml --scope junit:test lombok:provided
 ```
 
 Notes about behavior

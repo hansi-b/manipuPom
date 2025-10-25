@@ -3,7 +3,7 @@ import sys
 import subprocess
 from pathlib import Path
 
-# Ensure src is on sys.path so we can import parse_pom
+# Ensure src is on sys.path so we can import mod_deps
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / 'src'
 sys.path.insert(0, str(SRC))
@@ -13,15 +13,15 @@ import shutil
 
 import pytest
 
-import parse_pom as pp
+import mod_deps as md
 
 
 TEST_POM = Path(__file__).resolve().parent / 'data' / 'pom.xml'
 
 
 def test_get_default_namespace_and_root_tag():
-    root = pp.read_pom(str(TEST_POM))
-    ns = pp._get_default_namespace(root)
+    root = md.read_pom(str(TEST_POM))
+    ns = md._get_default_namespace(root)
     assert ns == 'http://maven.apache.org/POM/4.0.0'
     # root tag should include the namespace when parsed by ElementTree
     assert root.tag.startswith('{') and 'http://maven.apache.org/POM/4.0.0' in root.tag
@@ -32,19 +32,19 @@ def test_remove_dependencies_removes_by_artifactid(tmp_path):
     tmp_pom = tmp_path / 'pom.xml'
     shutil.copy2(TEST_POM, tmp_pom)
 
-    root = pp.read_pom(str(tmp_pom))
+    root = md.read_pom(str(tmp_pom))
 
     # ensure the artifactIds we will remove are present initially
     artifact_ids = {"htmlcleaner", "jxl"}
     found = set()
-    ns = pp._get_default_namespace(root)
+    ns = md._get_default_namespace(root)
     qn = lambda local: f"{{{ns}}}{local}" if ns else local
     for art in root.findall('.//' + qn('artifactId')):
         if art.text in artifact_ids:
             found.add(art.text)
     assert found == artifact_ids
 
-    removed = pp.remove_dependencies(root, artifact_ids)
+    removed = md.remove_dependencies(root, artifact_ids)
     assert removed == 2
 
     # after removal, there should be no artifactId elements with those texts
@@ -58,13 +58,13 @@ def test_change_dependency_scopes(tmp_path):
     tmp_pom = tmp_path / 'pom.xml'
     shutil.copy2(TEST_POM, tmp_pom)
 
-    root = pp.read_pom(str(tmp_pom))
-    ns = pp._get_default_namespace(root)
+    root = md.read_pom(str(tmp_pom))
+    ns = md._get_default_namespace(root)
     qn = lambda local: f"{{{ns}}}{local}" if ns else local
 
     # Test both changing an existing scope and adding a new one
     scope_changes = ["testng:test", "selenium-java:provided"]
-    modified = pp.change_dependency_scopes(root, scope_changes)
+    modified = md.change_dependency_scopes(root, scope_changes)
     assert modified == 2
 
     # Verify the changes
@@ -84,7 +84,7 @@ def test_script_fails_on_missing_dependency(tmp_path):
     shutil.copy2(TEST_POM, tmp_pom)
 
     # Run the script requesting a non-existent artifact
-    cmd = [sys.executable, str(SRC / 'parse_pom.py'), str(tmp_pom), 'non-existent-artifact']
+    cmd = [sys.executable, str(SRC / 'mod_deps.py'), str(tmp_pom), 'non-existent-artifact']
     proc = subprocess.run(cmd, capture_output=True, text=True)
 
     # Should exit with code 1 and print error to stderr
