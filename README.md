@@ -1,12 +1,14 @@
 # manipuPom
 
+:warning: This utility has mostly been written with the Github Copilot, and I have only superficially checked its adequacy. Seems to be ok, but use at your own risk.
+
 Small utility to read and modify a Maven `pom.xml` using Python's
 `xml.etree.ElementTree`.
 
 This repository contains:
 
-- `src/mod_deps.py` — the main script. It can print a POM, remove
-  dependencies by `artifactId`, and optionally write changes back to the
+- `src/mod_deps.py` — Script to modify dependencies. It can remove
+  dependencies by `artifactId`, change the scope of dependencies, and optionally write changes back to the
   POM file. When writing, the script will automatically create a
   `.bak` backup of the original file.
 - `tests/data/pom.xml` — an example Maven POM used by the test suite.
