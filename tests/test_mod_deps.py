@@ -84,7 +84,7 @@ def test_script_fails_on_missing_dependency(tmp_path):
     shutil.copy2(TEST_POM, tmp_pom)
 
     # Run the script requesting a non-existent artifact
-    cmd = [sys.executable, str(SRC / 'mod_deps.py'), str(tmp_pom), 'non-existent-artifact']
+    cmd = [sys.executable, str(SRC / 'mod_deps.py'), str(tmp_pom), '--delete', 'non-existent-artifact']
     proc = subprocess.run(cmd, capture_output=True, text=True)
 
     # Should exit with code 1 and print error to stderr

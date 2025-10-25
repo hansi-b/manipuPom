@@ -49,7 +49,7 @@ From the repository root you can run the script directly. The CLI
 signature is:
 
 ```
-python3 src/mod_deps.py <pom-path> [removeDeps ...] [--write] [--scope ARTIFACT:SCOPE ...]
+python3 src/mod_deps.py <pom-path> [--delete ARTIFACT ...] [--write] [--scope ARTIFACT:SCOPE ...]
 ```
 
 Examples:
@@ -63,14 +63,14 @@ python3 src/mod_deps.py someProject/pom.xml
 - Remove dependencies by `artifactId` and print the modified POM:
 
 ```bash
-python3 src/mod_deps.py someProject/pom.xml htmlcleaner jxl
+python3 src/mod_deps.py someProject/pom.xml --delete htmlcleaner jxl
 ```
 
 - Remove dependencies and overwrite the POM (a `.bak` copy will be
   created automatically):
 
 ```bash
-python3 src/mod_deps.py someProject/pom.xml htmlcleaner jxl --write
+python3 src/mod_deps.py someProject/pom.xml --delete htmlcleaner jxl --write
 ```
 
 - Change dependency scopes (can be combined with removal):

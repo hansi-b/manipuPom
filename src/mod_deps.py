@@ -107,7 +107,8 @@ def change_dependency_scopes(root: ET.Element, scope_changes: Iterable[str]) -> 
 def parse_args():
     p = argparse.ArgumentParser(description='Modify dependencies in a pom.xml')
     p.add_argument('pom', help='path to pom.xml (required positional)')
-    p.add_argument('removeDeps', nargs='*', help='artifactId words to remove from dependencies')
+    p.add_argument('--delete', '-d', nargs='+', metavar='ARTIFACT',
+                  help='artifactIds to remove from dependencies')
     p.add_argument('--write', '-w', action='store_true', help='overwrite the input pom with the modified XML (a .bak copy will be created)')
     p.add_argument('--scope', '-s', nargs='+', metavar='ARTIFACT:SCOPE',
                   help='change dependency scopes. Format: artifactId:newScope (e.g., junit:test)')
@@ -118,8 +119,8 @@ if __name__ == "__main__":
     pom_path = args.pom
     pom_root = read_pom(pom_path)
 
-    if args.removeDeps:
-        handle_remove_deps(pom_root, set(args.removeDeps))
+    if args.delete:
+        handle_remove_deps(pom_root, set(args.delete))
 
     if args.scope:
         modified = change_dependency_scopes(pom_root, args.scope)
