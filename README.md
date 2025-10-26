@@ -11,19 +11,16 @@ This repository contains:
   dependencies by `artifactId`, change the scope of dependencies, and optionally write changes back to the
   POM file. When writing, the script will automatically create a
   `.bak` backup of the original file.
-- `tests/data/pom.xml` — an example Maven POM used by the test suite.
-- `tests/test_mod_deps.py` — pytest-based unit tests for namespace
-  detection and dependency removal.
+- `tests/` — pytest-based unit tests.
+- `tests/data/` — test data used by the test suite.
 - `requirements-dev.txt` — development/test dependencies (currently
   contains `pytest`).
 
 ## Features
 
-- Detects the root namespace in the POM and registers it as the default
-  namespace for serialization, so the output includes a single
-  `xmlns="..."` on the root element (no repeated namespace
-  declarations on child elements).
-- Remove `<dependency>` entries by passing one or more `artifactId`
+### mod_deps.py
+
+- Remove `<dependency>` entries by passing one or more `--delete artifactId`
   values on the command line.
 - Change dependency `<scope>` using `--scope artifactId:newScope` format.
 - Optionally overwrite the original POM; a `.bak` copy is always
@@ -56,12 +53,6 @@ python3 src/mod_deps.py <pom-path> [--delete ARTIFACT ...] [--write] [--scope AR
 
 Examples:
 
-- Print a POM in `someProject` (no changes):
-
-```bash
-python3 src/mod_deps.py someProject/pom.xml
-```
-
 - Remove dependencies by `artifactId` and print the modified POM:
 
 ```bash
@@ -93,11 +84,7 @@ Notes about behavior
 
 ## Tests
 
-Tests are provided using `pytest` in `tests/test_parse_pom.py`. The
-tests exercise namespace detection and that `remove_dependencies`
-removes the example artifactIds from `tests/data/pom.xml`.
-
-Run tests with a venv Python (example):
+Tests are provided using `pytest` in `tests`. Run tests with a venv Python (example):
 
 ```bash
 python -m pytest -q
