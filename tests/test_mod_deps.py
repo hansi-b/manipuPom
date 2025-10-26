@@ -76,19 +76,21 @@ def test_change_dependency_scopes(tmp_path):
             elif art.text == 'selenium-java':
                 assert scope is not None and scope.text == 'provided'
 
-def test_script_fails_on_missing_dependency(tmp_path):
+def test_script_fails_on_missing_dependency(tmp_path, capsys):
     """Verify the script fails with exit code 1 when a requested artifactId doesn't exist."""
     # copy test POM to a temporary location so we don't modify the original
     tmp_pom = tmp_path / 'pom.xml'
     shutil.copy2(TEST_POM, tmp_pom)
 
-    # Run the script requesting a non-existent artifact
-    cmd = [sys.executable, str(SRC / 'mod_deps.py'), str(tmp_pom), '--delete', 'non-existent-artifact']
-    proc = subprocess.run(cmd, capture_output=True, text=True)
-
-    # Should exit with code 1 and print error to stderr
-    assert proc.returncode == 1
-    assert "Error: specified artifactIds not found in POM: non-existent-artifact" in proc.stderr
+    # Invoke the module's main() with arguments and expect SystemExit(1)
+    argv = [str(tmp_pom), '--delete', 'non-existent-artifact']
+    with pytest.raises(SystemExit) as excinfo:
+        md.main(argv)
+    # SystemExit code should be 1
+    assert excinfo.value.code == 1
+    # Capture printed stderr output and ensure error message is present
+    captured = capsys.readouterr()
+    assert "Error: specified artifactIds not found in POM: non-existent-artifact" in captured.err
 
     # The POM should not be modified (content should match original)
     with open(TEST_POM) as f:

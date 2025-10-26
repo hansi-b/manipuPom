@@ -104,7 +104,7 @@ def change_dependency_scopes(root: ET.Element, scope_changes: Iterable[str]) -> 
     return modified
 
 
-def parse_args():
+def parse_args(argv=None):
     p = argparse.ArgumentParser(description='Modify dependencies in a pom.xml')
     p.add_argument('pom', help='path to pom.xml (required positional)')
     p.add_argument('--delete', '-d', nargs='+', metavar='ARTIFACT',
@@ -112,10 +112,16 @@ def parse_args():
     p.add_argument('--write', '-w', action='store_true', help='overwrite the input pom with the modified XML (a .bak copy will be created)')
     p.add_argument('--scope', '-s', nargs='+', metavar='ARTIFACT:SCOPE',
                   help='change dependency scopes. Format: artifactId:newScope (e.g., junit:test)')
-    return p.parse_args()
+    return p.parse_args(argv)
 
-if __name__ == "__main__":
-    args = parse_args()
+
+def main(argv=None):
+    """Main entry point. Accepts argv (list of strings) for programmatic invocation.
+
+    When called directly from the command line __name__ == '__main__', pass None
+    so argparse reads from sys.argv. For tests, pass an argv list.
+    """
+    args = parse_args(argv)
     pom_path = args.pom
     pom_root = read_pom(pom_path)
 
@@ -148,3 +154,6 @@ if __name__ == "__main__":
         print(f"Wrote modified POM to {pom_path}")
     else:
         print(out)
+
+if __name__ == "__main__":
+    main()
