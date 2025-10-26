@@ -34,7 +34,7 @@
         </dependency>
         <dependency>
             <groupId>example.org</groupId>
-            <artifactId>htest-deps-graph-b</artifactId>
+            <artifactId>test-deps-graph-b</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>

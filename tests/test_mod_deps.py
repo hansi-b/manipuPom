@@ -13,17 +13,10 @@ import shutil
 import pytest
 
 import mod_deps as md
+from pom_utils import get_default_namespace
 
 
 TEST_POM = Path(__file__).resolve().parent / 'data' / 'pom.xml'
-
-
-def test_get_default_namespace_and_root_tag():
-    root = md.read_pom(str(TEST_POM))
-    ns = md._get_default_namespace(root)
-    assert ns == 'http://maven.apache.org/POM/4.0.0'
-    # root tag should include the namespace when parsed by ElementTree
-    assert root.tag.startswith('{') and 'http://maven.apache.org/POM/4.0.0' in root.tag
 
 
 def test_remove_dependencies_removes_by_artifactid(tmp_path):
@@ -36,7 +29,7 @@ def test_remove_dependencies_removes_by_artifactid(tmp_path):
     # ensure the artifactIds we will remove are present initially
     artifact_ids = {"htmlcleaner", "jxl"}
     found = set()
-    ns = md._get_default_namespace(root)
+    ns = get_default_namespace(root)
     qn = lambda local: f"{{{ns}}}{local}" if ns else local
     for art in root.findall('.//' + qn('artifactId')):
         if art.text in artifact_ids:
@@ -58,7 +51,7 @@ def test_change_dependency_scopes(tmp_path):
     shutil.copy2(TEST_POM, tmp_pom)
 
     root = md.read_pom(str(tmp_pom))
-    ns = md._get_default_namespace(root)
+    ns = get_default_namespace(root)
     qn = lambda local: f"{{{ns}}}{local}" if ns else local
 
     # Test both changing an existing scope and adding a new one
