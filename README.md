@@ -13,7 +13,7 @@ This repository contains:
   `.bak` backup of the original file.
 - `tests/` — pytest-based unit tests.
 - `tests/data/` — test data used by the test suite.
-- `requirements-dev.txt` — development/test dependencies (currently
+- `requirements.txt` — development/test dependencies (currently
   contains `pytest`).
 
 ## Features
@@ -29,7 +29,7 @@ This repository contains:
 ## Requirements
 
 - Python 3.10+
-- For running tests: `pytest` (listed in `requirements-dev.txt`).
+- For running tests: `pytest` (listed in `requirements.txt`).
 
 ## Installation / Setup
 
@@ -39,7 +39,7 @@ dev requirements:
 ```
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 ```
 
 ## Usage
