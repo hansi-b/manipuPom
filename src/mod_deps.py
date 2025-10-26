@@ -30,10 +30,10 @@ def get_qn_lambda(root: ET.Element):
     ns = _get_default_namespace(root)
     return (lambda local: f"{{{ns}}}{local}") if ns else lambda local: local
 
-
-def handle_remove_deps(pom_root: ET.Element, requested: Iterable[str]):
+def verify_artifactids_arguments(pom_root: ET.Element, requested: Iterable[str]):
     """
-    If artifacts to remove were passed, verify they're present then remove matching dependencies
+    Verify that all requested artifactIds are present in the POM.
+    If any are missing, print an error and exit.
     """
     present = find_artifactids(pom_root)
     missing = requested - present
@@ -42,24 +42,22 @@ def handle_remove_deps(pom_root: ET.Element, requested: Iterable[str]):
         # Do not modify or write anything if a requested dependency is missing
         sys.exit(1)
 
-    removed = remove_dependencies(pom_root, requested)
-    print(f"Removed {removed} matching dependencies", flush=True)
 
-def remove_dependencies(root: ET.Element, artifact_names: Iterable[str]) -> int:
+def remove_dependencies(root: ET.Element, requested: Iterable[str]):
     """
     Remove <dependency> elements whose <artifactId> text is in artifact_names.
-
-    Returns number of removed dependencies.
     """
-    removed = 0
+    verify_artifactids_arguments(root, requested)
+
     qn = get_qn_lambda(root)
 
+    removed = 0
     # Find all <dependencies> containers and inspect their <dependency> children
     for deps_container in root.findall('.//' + qn('dependencies')):
         # iterate over a copy since we'll remove elements
         for dep in list(deps_container.findall(qn('dependency'))):
             art = dep.find(qn('artifactId'))
-            if art is not None and art.text in artifact_names:
+            if art is not None and art.text in requested:
                 deps_container.remove(dep)
                 removed += 1
     return removed
@@ -95,6 +93,8 @@ def change_dependency_scopes(root: ET.Element, scope_changes: Iterable[str]) -> 
         except ValueError:
             print(f"Error: Invalid scope change format '{change}'. Expected 'artifactId:newScope'", file=sys.stderr)
             sys.exit(1)
+
+    verify_artifactids_arguments(root, set(scope_map.keys()))
 
     # Find all <dependencies> containers and inspect their <dependency> children
     for deps_container in root.findall('.//' + qn('dependencies')):
@@ -133,7 +133,8 @@ def main(argv=None):
     pom_root = read_pom(pom_path)
 
     if args.delete:
-        handle_remove_deps(pom_root, set(args.delete))
+        removed = remove_dependencies(pom_root, set(args.delete))
+        print(f"Removed {removed} matching dependencies", flush=True)
 
     if args.scope:
         modified = change_dependency_scopes(pom_root, args.scope)
