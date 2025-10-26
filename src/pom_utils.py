@@ -42,7 +42,7 @@ def iter_deps(root: ET.Element):
         for dep in deps:
             yield dep
 
-def find_artifactids(root: ET.Element) -> set:
+def find_deps_ids(root: ET.Element) -> set:
     """Return a set of dependency artifactId text values found in the POM (namespace-aware).
     """
     qn = get_qn_lambda(root)
@@ -53,12 +53,12 @@ def find_artifactids(root: ET.Element) -> set:
             artifact_ids.add(art.text)
     return artifact_ids
 
-def verify_artifactids_arguments(pom_root: ET.Element, requested: Iterable[str]):
+def verify_deps_arguments(pom_root: ET.Element, requested: Iterable[str]):
     """
     Verify that all requested artifactIds are present in the POM.
     If any are missing, print an error and exit.
     """
-    present = find_artifactids(pom_root)
+    present = find_deps_ids(pom_root)
     missing = requested - present
     if missing:
         print(f"Error: specified artifactIds not found in POM: {', '.join(sorted(missing))}", file=sys.stderr)

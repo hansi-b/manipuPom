@@ -3,14 +3,14 @@
 import sys
 import xml.etree.ElementTree as ET
 from typing import Iterable
-from pom_utils import get_default_namespace, get_qn_lambda, iter_deps, iter_deps_with_container, verify_artifactids_arguments, read_pom
+from pom_utils import get_default_namespace, get_qn_lambda, iter_deps, iter_deps_with_container, verify_deps_arguments, read_pom
 
 
 def remove_dependencies(root: ET.Element, requested: Iterable[str]):
     """
     Remove <dependency> elements whose <artifactId> text is in artifact_names.
     """
-    verify_artifactids_arguments(root, requested)
+    verify_deps_arguments(root, requested)
 
     qn = get_qn_lambda(root)
 
@@ -43,7 +43,7 @@ def change_dependency_scopes(root: ET.Element, scope_changes: Iterable[str]) -> 
             print(f"Error: Invalid scope change format '{change}'. Expected 'artifactId:newScope'", file=sys.stderr)
             sys.exit(1)
 
-    verify_artifactids_arguments(root, set(scope_map.keys()))
+    verify_deps_arguments(root, set(scope_map.keys()))
 
     for dep in iter_deps(root):
         art = dep.find(qn('artifactId'))
