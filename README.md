@@ -29,12 +29,12 @@ This repository contains:
 ## Requirements
 
 - Python 3.10+
-- For running tests: `pytest` (listed in `requirements.txt`).
+- modules as listed in `requirements.txt`
 
 ## Installation / Setup
 
 Recommended: create and activate a virtual environment, then install
-dev requirements:
+requirements:
 
 ```
 python -m venv .venv
