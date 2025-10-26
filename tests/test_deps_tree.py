@@ -14,7 +14,7 @@ TEST_DATA = Path(__file__).resolve().parent / 'data'
 def test_find_poms_in_dir():
     """Test finding POMs in a directory structure"""
     # Get all POMs
-    poms = dt.find_poms_under(TEST_DATA)
+    poms = dt.find_poms_in_dir(TEST_DATA)
     
     # Should find exactly 3 POMs - one in data dir, one in repo_a, one in repo_b
     assert len(poms) == 3
@@ -34,7 +34,7 @@ def test_find_poms_in_dir():
 
 def test_find_poms_in_empty_dir(tmp_path):
     """Test finding POMs in an empty directory"""
-    poms = dt.find_poms_under(tmp_path)
+    poms = dt.find_poms_in_dir(tmp_path)
     assert len(poms) == 0
 
 def test_find_poms_in_dir_with_no_poms(tmp_path):
@@ -45,5 +45,5 @@ def test_find_poms_in_dir_with_no_poms(tmp_path):
     os.mkdir(tmp_path / 'subdir')
     (tmp_path / 'subdir' / 'other.xml').touch()
     
-    poms = dt.find_poms_under(tmp_path)
+    poms = dt.find_poms_in_dir(tmp_path)
     assert len(poms) == 0
