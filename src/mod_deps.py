@@ -5,6 +5,9 @@ import sys
 import xml.etree.ElementTree as ET
 from typing import Iterable
 
+#
+# generic XML/POM utility functions
+#
 
 def read_pom(pom_path):
     tree = ET.parse(pom_path)
@@ -30,6 +33,32 @@ def get_qn_lambda(root: ET.Element):
     ns = _get_default_namespace(root)
     return (lambda local: f"{{{ns}}}{local}") if ns else lambda local: local
 
+def iter_deps_with_container(root: ET.Element):
+    """
+    Generator that yields (dependencies_container, list_of_dependency_elements) tuples."""
+    qn = get_qn_lambda(root)
+    for deps_container in root.findall('.//' + qn('dependencies')):
+        yield deps_container, deps_container.findall(qn('dependency'))
+
+def iter_deps(root: ET.Element):
+    """
+    Generator that yields dependency elements."""
+    deps_with_container = iter_deps_with_container(root)
+    for _, deps in deps_with_container:
+        for dep in deps:
+            yield dep
+
+def find_artifactids(root: ET.Element) -> set:
+    """Return a set of dependency artifactId text values found in the POM (namespace-aware).
+    """
+    qn = get_qn_lambda(root)
+    artifact_ids = set()
+    for dep in iter_deps(root):
+        art = dep.find(qn('artifactId'))
+        if art is not None and art.text:
+            artifact_ids.add(art.text)
+    return artifact_ids
+
 def verify_artifactids_arguments(pom_root: ET.Element, requested: Iterable[str]):
     """
     Verify that all requested artifactIds are present in the POM.
@@ -42,6 +71,9 @@ def verify_artifactids_arguments(pom_root: ET.Element, requested: Iterable[str])
         # Do not modify or write anything if a requested dependency is missing
         sys.exit(1)
 
+#
+# specific functionality for modifying dependencies
+#
 
 def remove_dependencies(root: ET.Element, requested: Iterable[str]):
     """
@@ -52,28 +84,14 @@ def remove_dependencies(root: ET.Element, requested: Iterable[str]):
     qn = get_qn_lambda(root)
 
     removed = 0
-    # Find all <dependencies> containers and inspect their <dependency> children
-    for deps_container in root.findall('.//' + qn('dependencies')):
+    for deps_container, deps in iter_deps_with_container(root):
         # iterate over a copy since we'll remove elements
-        for dep in list(deps_container.findall(qn('dependency'))):
+        for dep in list(deps):
             art = dep.find(qn('artifactId'))
             if art is not None and art.text in requested:
                 deps_container.remove(dep)
                 removed += 1
     return removed
-
-
-def find_artifactids(root: ET.Element) -> set:
-    """Return a set of dependency artifactId text values found in the POM (namespace-aware).
-    """
-    qn = get_qn_lambda(root)
-    artifact_ids = set()
-    for deps_container in root.findall('.//' + qn('dependencies')):
-        for dep in deps_container.findall(qn('dependency')):
-            art = dep.find(qn('artifactId'))
-            if art is not None and art.text:
-                artifact_ids.add(art.text)
-    return artifact_ids
 
 
 def change_dependency_scopes(root: ET.Element, scope_changes: Iterable[str]) -> int:
@@ -96,17 +114,15 @@ def change_dependency_scopes(root: ET.Element, scope_changes: Iterable[str]) -> 
 
     verify_artifactids_arguments(root, set(scope_map.keys()))
 
-    # Find all <dependencies> containers and inspect their <dependency> children
-    for deps_container in root.findall('.//' + qn('dependencies')):
-        for dep in deps_container.findall(qn('dependency')):
-            art = dep.find(qn('artifactId'))
-            if art is not None and art.text in scope_map:
-                scope_elem = dep.find(qn('scope'))
-                if scope_elem is None:
-                    # Create new scope element if it doesn't exist
-                    scope_elem = ET.SubElement(dep, qn('scope'))
-                scope_elem.text = scope_map[art.text]
-                modified += 1
+    for dep in iter_deps(root):
+        art = dep.find(qn('artifactId'))
+        if art is not None and art.text in scope_map:
+            scope_elem = dep.find(qn('scope'))
+            if scope_elem is None:
+                # Create new scope element if it doesn't exist
+                scope_elem = ET.SubElement(dep, qn('scope'))
+            scope_elem.text = scope_map[art.text]
+            modified += 1
 
     return modified
 
