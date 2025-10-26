@@ -23,9 +23,13 @@ def _get_default_namespace(elem):
     return None
 
 
-def _qn(local: str, ns: str | None) -> str:
-    """Qualified name helper: returns '{ns}local' when ns is set, else 'local'."""
-    return f"{{{ns}}}{local}" if ns else local
+def get_qn_lambda(root: ET.Element):
+    """
+    Returns a lambda that generates qualified names for the given XML root's namespace.
+    """
+    ns = _get_default_namespace(root)
+    return (lambda local: f"{{{ns}}}{local}") if ns else lambda local: local
+
 
 def handle_remove_deps(pom_root: ET.Element, requested: Iterable[str]):
     """
@@ -41,7 +45,6 @@ def handle_remove_deps(pom_root: ET.Element, requested: Iterable[str]):
     removed = remove_dependencies(pom_root, requested)
     print(f"Removed {removed} matching dependencies", flush=True)
 
-
 def remove_dependencies(root: ET.Element, artifact_names: Iterable[str]) -> int:
     """
     Remove <dependency> elements whose <artifactId> text is in artifact_names.
@@ -49,8 +52,7 @@ def remove_dependencies(root: ET.Element, artifact_names: Iterable[str]) -> int:
     Returns number of removed dependencies.
     """
     removed = 0
-    ns = _get_default_namespace(root)
-    qn = lambda local: _qn(local, ns)
+    qn = get_qn_lambda(root)
 
     # Find all <dependencies> containers and inspect their <dependency> children
     for deps_container in root.findall('.//' + qn('dependencies')):
@@ -65,8 +67,7 @@ def remove_dependencies(root: ET.Element, artifact_names: Iterable[str]) -> int:
 
 def find_artifactids(root: ET.Element) -> set:
     """Return a set of artifactId text values found in the POM (namespace-aware)."""
-    ns = _get_default_namespace(root)
-    qn = lambda local: _qn(local, ns)
+    qn = get_qn_lambda(root)
     return {el.text for el in root.findall('.//' + qn('artifactId')) if el.text}
 
 
@@ -76,8 +77,7 @@ def change_dependency_scopes(root: ET.Element, scope_changes: Iterable[str]) -> 
     Returns number of dependencies modified.
     """
     modified = 0
-    ns = _get_default_namespace(root)
-    qn = lambda local: _qn(local, ns)
+    qn = get_qn_lambda(root)
 
     # Parse the scope changes into a dict
     scope_map = {}
