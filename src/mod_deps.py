@@ -66,9 +66,16 @@ def remove_dependencies(root: ET.Element, artifact_names: Iterable[str]) -> int:
 
 
 def find_artifactids(root: ET.Element) -> set:
-    """Return a set of artifactId text values found in the POM (namespace-aware)."""
+    """Return a set of dependency artifactId text values found in the POM (namespace-aware).
+    """
     qn = get_qn_lambda(root)
-    return {el.text for el in root.findall('.//' + qn('artifactId')) if el.text}
+    artifact_ids = set()
+    for deps_container in root.findall('.//' + qn('dependencies')):
+        for dep in deps_container.findall(qn('dependency')):
+            art = dep.find(qn('artifactId'))
+            if art is not None and art.text:
+                artifact_ids.add(art.text)
+    return artifact_ids
 
 
 def change_dependency_scopes(root: ET.Element, scope_changes: Iterable[str]) -> int:
