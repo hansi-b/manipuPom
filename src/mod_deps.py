@@ -1,7 +1,5 @@
 # read argument pom.xml and parse as xml
 
-import argparse
-import shutil
 import sys
 import xml.etree.ElementTree as ET
 from typing import Iterable
@@ -61,6 +59,7 @@ def change_dependency_scopes(root: ET.Element, scope_changes: Iterable[str]) -> 
 
 
 def parse_args(argv=None):
+    import argparse
     p = argparse.ArgumentParser(description='Modify dependencies in a pom.xml')
     p.add_argument('pom', help='path to pom.xml (required positional)')
     p.add_argument('--delete', '-d', nargs='+', metavar='ARTIFACT',
@@ -100,6 +99,7 @@ def main(argv=None):
     out = ET.tostring(pom_root, encoding='unicode')
 
     if args.write:
+        import shutil
         # Always back up the original file before overwriting
         backup_path = f"{pom_path}.bak"
         shutil.copy2(pom_path, backup_path)
