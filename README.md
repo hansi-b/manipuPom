@@ -2,6 +2,9 @@
 
 :warning: This utility has mostly been written with the Github Copilot, and I have only superficially checked its adequacy. Seems to be ok, but use at your own risk.
 
+[![Lint and unit tests](https://github.com/hansi-b/manipuPom/actions/workflows/lint_and_unit_tests.yml/badge.svg)](https://github.com/hansi-b/manipuPom/actions/workflows/lint_and_unit_tests.yml)
+
+
 Small utility to read and modify a Maven `pom.xml` using Python's
 `xml.etree.ElementTree`. It can also visualize dependency relationships across multiple Maven projects.
 
