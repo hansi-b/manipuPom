@@ -3,7 +3,7 @@
 :warning: This utility has mostly been written with the Github Copilot, and I have only superficially checked its adequacy. Seems to be ok, but use at your own risk.
 
 Small utility to read and modify a Maven `pom.xml` using Python's
-`xml.etree.ElementTree`.
+`xml.etree.ElementTree`. It can also visualize dependency relationships across multiple Maven projects.
 
 This repository contains:
 
@@ -11,10 +11,12 @@ This repository contains:
   dependencies by `artifactId`, change the scope of dependencies, and optionally write changes back to the
   POM file. When writing, the script will automatically create a
   `.bak` backup of the original file.
+- `src/deps_tree.py` — Script to generate dependency graphs from Maven projects. It can analyze multiple
+  POM files in a directory structure and output the dependency relationships in either PlantUML or JSON format.
 - `tests/` — pytest-based unit tests.
 - `tests/data/` — test data used by the test suite.
 - `requirements.txt` — development/test dependencies (currently
-  contains `pytest`).
+  contains `pytest` and `networkx`).
 
 ## Features
 
@@ -25,6 +27,12 @@ This repository contains:
 - Change dependency `<scope>` using `--scope artifactId:newScope` format.
 - Optionally overwrite the original POM; a `.bak` copy is always
   created before overwriting.
+
+### deps_tree.py
+
+- Generate dependency graphs from all POM files in a directory structure.
+- Output dependency relationships in either PlantUML or JSON format.
+- With PlantUML: Visualize root projects and leaf dependencies in separate clusters.
 
 ## Requirements
 
@@ -70,6 +78,19 @@ python3 src/mod_deps.py someProject/pom.xml --delete htmlcleaner jxl --write
 
 ```bash
 python3 src/mod_deps.py someProject/pom.xml --scope junit:test lombok:provided
+```
+
+To generate a dependency graph:
+
+```bash
+# Generate PlantUML output (default)
+python3 src/deps_tree.py path/to/maven/project
+
+# Generate JSON output
+python3 src/deps_tree.py path/to/maven/project --format json
+
+# Write output to a file
+python3 src/deps_tree.py path/to/maven/project --format plantuml --outfile deps.puml
 ```
 
 Notes about behavior

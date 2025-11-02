@@ -54,31 +54,68 @@ def build_dependency_graph(directory: Path):
             G.add_edge(artifact, d)
     return G
 
-def write_json(G: nx.DiGraph, output_file: str|None):
-    """Generate a JSON representation of the dependency graph."""
-    data = nx.readwrite.json_graph.node_link_data(G, edges="edges")
-    import json
-    if output_file is None:
-        print(json.dumps(data, indent=2))
-        return
-    with open(output_file, 'w') as f:
-        json.dump(data, f, indent=2)
-    print(f"Dependency graph written to {output_file}")
+def generate_plant_uml(G: nx.DiGraph) -> str:
+    """Generate a PlantUML representation of the dependency graph."""
+    
+    # from the graph, find all nodes which have no incoming edges (i.e., root projects)
+    roots = [n for n in G.nodes if G.in_degree(n) == 0]
+    # from the graph, find all leaves (nodes with no outgoing edges)
+    leaves = [n for n in G.nodes if G.out_degree(n) == 0]
+    
+    lines = ["@startuml", "digraph G {"]
+    for node in G.nodes:
+        lines.append(f'  "{node}" [shape=box, style=rounded]')
+    
+    # group the roots in a subgraph
+    if roots:
+        lines.append("  subgraph cluster_roots {")
+        lines.append('    label="Root Projects";')
+        for r in roots:
+            lines.append(f'    "{r}";')
+        lines.append("  }")
+    # group the leaves in a subgraph
+    if leaves:
+        lines.append("  subgraph cluster_leaves {")
+        lines.append('    label="Leaf Dependencies";')
+        for l in leaves:
+            lines.append(f'    "{l}";')
+        lines.append("  }")
+        
+    for src, dst in G.edges:
+        lines.append(f'  "{src}" -> "{dst}";')
+    lines.append("}")
+    lines.append("@enduml")
+    return "\n".join(lines)
 
+def generate_json(G: nx.DiGraph) -> str:   
+    """Generate a JSON representation of the dependency graph."""
+    import json
+    data = nx.readwrite.json_graph.node_link_data(G, edges="edges")
+    return json.dumps(data, indent=2)
 
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="Generate dependency relations graph from all pom.xml files in a directory.")
     parser.add_argument("directory", help="Root directory to search for pom.xml files")
-    parser.add_argument("--outfile", "-f", help="If provided, save JSON to this file.")
+    parser.add_argument("--format", "-m", choices=["plantuml", "json"], default="plantuml",
+                        help="Output format for the dependency graph (default: plantuml)")
+    parser.add_argument("--outfile", "-f", help="If provided, write generated toutput to this file.")
     args = parser.parse_args()
 
     # Build graph and visualize
     G = build_dependency_graph(Path(args.directory))
     print(f"Built dependency graph with {G.number_of_nodes()} nodes and {G.number_of_edges()} edges.")
-    # write the graph as JSON
-    write_json(G, args.outfile)
-    
+    graph_output = ""
+    if args.format == "plantuml":
+        graph_output = generate_plant_uml(G)
+    elif args.format == "json":
+        graph_output = generate_json(G)
+    if args.outfile:
+        with open(args.outfile, "w") as f:
+            f.write(graph_output)
+        print(f"Wrote output to {args.outfile}")
+    else:
+        print(graph_output)
 
 if __name__ == "__main__":
     main()
