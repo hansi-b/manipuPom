@@ -32,7 +32,11 @@ This repository contains:
 
 - Generate dependency graphs from all POM files in a directory structure.
 - Output dependency relationships in either PlantUML or JSON format.
-- With PlantUML: Visualize root projects and leaf dependencies in separate clusters.
+- Visualize root projects and leaf dependencies in separate clusters.
+- Identify and visualize project dependencies based on groupId:artifactId pairs.
+- Filter dependencies by including or excluding specific groupIds.
+- Flexible node naming with optional groupId inclusion.
+- Support writing output to files or standard output.
 
 ## Requirements
 
@@ -91,6 +95,18 @@ python3 src/deps_tree.py path/to/maven/project --format json
 
 # Write output to a file
 python3 src/deps_tree.py path/to/maven/project --format plantuml --outfile deps.puml
+
+# Show artifactIds with group IDs
+python3 src/deps_tree.py path/to/maven/project --add-group-id
+
+# Only include specific groups
+python3 src/deps_tree.py path/to/maven/project --include-groups org.springframework com.example
+
+# Exclude specific groups
+python3 src/deps_tree.py path/to/maven/project --exclude-groups org.apache.logging org.slf4j
+
+# Combine options
+python3 src/deps_tree.py path/to/maven/project --add-group-id --include-groups org.springframework --format json
 ```
 
 Notes about behavior
@@ -116,9 +132,3 @@ Or with an activated venv that has `pytest` installed:
 ```bash
 pytest -q
 ```
-
-## Contributing
-
-If you want to add features (for example pattern-based matching for
-artifactIds, dry-run mode, or keeping original prefixing for namespaces),
-open an issue or submit a PR. Keep changes small and include unit tests.

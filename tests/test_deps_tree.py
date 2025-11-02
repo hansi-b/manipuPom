@@ -104,3 +104,81 @@ def test_generate_json():
         assert "source" in edge
         assert "target" in edge
         assert G.has_edge(edge["source"], edge["target"])
+
+def test_build_graph_without_group_ids():
+    """Test building graph with groupIds excluded from node names"""
+    G = dt.build_dependency_graph(TEST_DATA, include_group_id=False)
+    
+    # Verify that no node names contain colons (which would indicate groupId:artifactId format)
+    for node in G.nodes:
+        assert ':' not in node
+
+def test_graph_with_included_groups():
+    """Test building graph with only specific included groups"""
+    # First get a normal graph to find a group to include
+    full_G = dt.build_dependency_graph(TEST_DATA)
+    # Get the first group we find
+    sample_group = next(node.split(':')[0] for node in full_G.nodes if ':' in node)
+    
+    # Now build a graph with only this group
+    G = dt.build_dependency_graph(TEST_DATA, included_groups={sample_group})
+    
+    # Verify that all nodes either have the included group or don't have a group specified
+    for node in G.nodes:
+        if ':' in node:  # If node has a group specified
+            group = node.split(':')[0]
+            assert group == sample_group
+
+def test_graph_with_excluded_groups():
+    """Test building graph with specific excluded groups"""
+    # First get a normal graph to find a group to exclude
+    full_G = dt.build_dependency_graph(TEST_DATA)
+    # Get the first group we find
+    excluded_group = next(node.split(':')[0] for node in full_G.nodes if ':' in node)
+    
+    # Now build a graph excluding this group
+    G = dt.build_dependency_graph(TEST_DATA, excluded_groups={excluded_group})
+    
+    # Verify that no nodes have the excluded group
+    for node in G.nodes:
+        if ':' in node:  # If node has a group specified
+            group = node.split(':')[0]
+            assert group != excluded_group
+
+def test_graph_with_include_exclude_interaction():
+    """Test that exclude groups takes precedence over include groups"""
+    # First get a normal graph to find groups to include and exclude
+    full_G = dt.build_dependency_graph(TEST_DATA)
+    groups = {node.split(':')[0] for node in full_G.nodes if ':' in node}
+    if len(groups) >= 2:
+        group_list = list(groups)
+        included_group = group_list[0]
+        excluded_group = group_list[0]  # Use same group to test exclusion precedence
+        
+        G = dt.build_dependency_graph(TEST_DATA, 
+                                    included_groups={included_group},
+                                    excluded_groups={excluded_group})
+        
+        # Verify that nodes with the excluded group are not present, even though
+        # the group was also in the included_groups
+        for node in G.nodes:
+            if ':' in node:
+                group = node.split(':')[0]
+                assert group != excluded_group
+
+def test_extract_dependencies_filtered_root():
+    """Test that filtering applies to root project as well"""
+    # Get a sample pom path
+    pom_path = dt.find_poms_in_dir(TEST_DATA)[0]
+    
+    # Get the normal output first to find the root's group
+    root_artifact, _ = dt.extract_dependencies(pom_path)
+    if ':' in root_artifact:
+        root_group = root_artifact.split(':')[0]
+        
+        # Now exclude the root's group
+        filtered_result = dt.extract_dependencies(pom_path, excluded_groups={root_group})
+        
+        # Should return None for filtered root
+        assert filtered_result[0] is None
+        assert len(filtered_result[1]) == 0
