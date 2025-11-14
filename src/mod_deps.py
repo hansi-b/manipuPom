@@ -58,6 +58,38 @@ def change_dependency_scopes(root: ET.Element, scope_changes: Iterable[str]) -> 
     return modified
 
 
+def change_dependency_version(root: ET.Element, scope_changes: Iterable[str]) -> int:
+    """
+    Change or add <version> elements in dependencies based on 'artifactId:version' pairs.
+    Returns number of dependencies modified.
+    """
+    modified = 0
+    qn = get_qn_lambda(root)
+
+    # Parse the version changes into a dict
+    version_map = {}
+    for change in scope_changes:  # keeping param name for backward compatibility with any external callers
+        try:
+            artifact_id, new_version = change.split(':')
+            version_map[artifact_id] = new_version
+        except ValueError:
+            print(f"Error: Invalid version change format '{change}'. Expected 'artifactId:newVersion'", file=sys.stderr)
+            sys.exit(1)
+
+    verify_deps_arguments(root, set(version_map.keys()))
+
+    for dep in iter_deps(root):
+        art = dep.find(qn('artifactId'))
+        if art is not None and art.text in version_map:
+            ver_elem = dep.find(qn('version'))
+            if ver_elem is None:
+                # Create new version element if it doesn't exist
+                ver_elem = ET.SubElement(dep, qn('version'))
+            ver_elem.text = version_map[art.text]
+            modified += 1
+
+    return modified
+
 def parse_args(argv=None):
     import argparse
     p = argparse.ArgumentParser(description='Modify dependencies in a pom.xml')
@@ -67,6 +99,8 @@ def parse_args(argv=None):
     p.add_argument('--write', '-w', action='store_true', help='overwrite the input pom with the modified XML (a .bak copy will be created)')
     p.add_argument('--scope', '-s', nargs='+', metavar='ARTIFACT:SCOPE',
                   help='change dependency scopes. Format: artifactId:newScope (e.g., junit:test)')
+    p.add_argument('--version', '-v', nargs='+', metavar='ARTIFACT:VERSION',
+                  help='change dependency versions. Format: artifactId:newVersion (e.g., junit:4.13.2)')
     return p.parse_args(argv)
 
 
@@ -87,6 +121,10 @@ def main(argv=None):
     if args.scope:
         modified = change_dependency_scopes(pom_root, args.scope)
         print(f"Modified {modified} dependency scopes", flush=True)
+
+    if args.version:
+        modified = change_dependency_version(pom_root, args.version)
+        print(f"Modified {modified} dependency versions", flush=True)
 
     # Register the root's namespace as the default namespace so ElementTree
     # writes a single xmlns="..." on the root instead of repeated xmlns:prefix
