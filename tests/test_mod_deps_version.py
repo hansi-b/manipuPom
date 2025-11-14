@@ -44,7 +44,8 @@ def test_change_dependency_version_update_and_insert(tmp_path):
 
     # Prepare changes: one existing (htmlcleaner) and one missing (testng)
     version_changes = ["htmlcleaner:2.22", "testng:7.11.0"]
-    modified = md.change_dependency_version(root, version_changes)
+    modified = md.apply_deps_changes(root, 'version',version_changes)
+
     assert modified == 2
 
     # Verify updates

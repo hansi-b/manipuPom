@@ -39,48 +39,25 @@ def parse_artifact_changes(changes: Iterable[str]) -> dict[str, str]:
             sys.exit(1)
     return changes_map
 
-def change_dependency_scopes(root: ET.Element, changes: Iterable[str]) -> int:
+
+def apply_deps_changes(root: ET.Element, target_element: str, changes: Iterable[str]) -> int:
     """
-    Change or add <scope> elements in dependencies based on 'artifactId:scope' pairs.
+    Change or add given target elements in dependencies based on 'artifactId:new_value' pairs.
     Returns number of dependencies modified.
     """
-
-    scope_map = parse_artifact_changes(changes)
-    verify_deps_arguments(root, set(scope_map.keys()))
+    change_map = parse_artifact_changes(changes)
+    verify_deps_arguments(root, set(change_map.keys()))
 
     modified = 0
     qn = get_qn_lambda(root)
     for dep in iter_deps(root):
         art = dep.find(qn('artifactId'))
-        if art is not None and art.text in scope_map:
-            scope_elem = dep.find(qn('scope'))
-            if scope_elem is None:
-                # Create new scope element if it doesn't exist
-                scope_elem = ET.SubElement(dep, qn('scope'))
-            scope_elem.text = scope_map[art.text]
-            modified += 1
-
-    return modified
-
-
-def change_dependency_version(root: ET.Element, changes: Iterable[str]) -> int:
-    """
-    Change or add <version> elements in dependencies based on 'artifactId:version' pairs.
-    Returns number of dependencies modified.
-    """
-    version_map = parse_artifact_changes(changes)
-    verify_deps_arguments(root, set(version_map.keys()))
-
-    modified = 0
-    qn = get_qn_lambda(root)
-    for dep in iter_deps(root):
-        art = dep.find(qn('artifactId'))
-        if art is not None and art.text in version_map:
-            ver_elem = dep.find(qn('version'))
+        if art is not None and art.text in change_map:
+            ver_elem = dep.find(qn(target_element))
             if ver_elem is None:
-                # Create new version element if it doesn't exist
-                ver_elem = ET.SubElement(dep, qn('version'))
-            ver_elem.text = version_map[art.text]
+                # Create new target element if it doesn't exist
+                ver_elem = ET.SubElement(dep, qn(target_element))
+            ver_elem.text = change_map[art.text]
             modified += 1
 
     return modified
@@ -115,11 +92,11 @@ def main(argv=None):
         print(f"Removed {removed} matching dependencies", flush=True)
 
     if args.scope:
-        modified = change_dependency_scopes(pom_root, args.scope)
+        modified = apply_deps_changes(pom_root, 'scope', args.scope)
         print(f"Modified {modified} dependency scopes", flush=True)
 
     if args.version:
-        modified = change_dependency_version(pom_root, args.version)
+        modified = apply_deps_changes(pom_root, 'version', args.version)
         print(f"Modified {modified} dependency versions", flush=True)
 
     # Register the root's namespace as the default namespace so ElementTree

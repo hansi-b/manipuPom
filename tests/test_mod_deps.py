@@ -56,7 +56,8 @@ def test_change_dependency_scopes(tmp_path):
 
     # Test both changing an existing scope and adding a new one
     scope_changes = ["testng:test", "selenium-java:provided"]
-    modified = md.change_dependency_scopes(root, scope_changes)
+    modified = md.apply_deps_changes(root, 'scope', scope_changes)
+    
     assert modified == 2
 
     # Verify the changes
