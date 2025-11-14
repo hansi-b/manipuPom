@@ -25,26 +25,31 @@ def remove_dependencies(root: ET.Element, requested: Iterable[str]):
     return removed
 
 
-def change_dependency_scopes(root: ET.Element, scope_changes: Iterable[str]) -> int:
+def parse_artifact_changes(changes: Iterable[str]) -> dict[str, str]:
+    """
+    Parse changes from 'artifactId:new_value' strings into a dictionary.
+    """
+    changes_map = {}
+    for change in changes:
+        try:
+            artifact_id, new_scope = change.split(':')
+            changes_map[artifact_id] = new_scope
+        except ValueError:
+            print(f"Error: Invalid change format '{change}'. Expected 'artifactId:new_value'", file=sys.stderr)
+            sys.exit(1)
+    return changes_map
+
+def change_dependency_scopes(root: ET.Element, changes: Iterable[str]) -> int:
     """
     Change or add <scope> elements in dependencies based on 'artifactId:scope' pairs.
     Returns number of dependencies modified.
     """
-    modified = 0
-    qn = get_qn_lambda(root)
 
-    # Parse the scope changes into a dict
-    scope_map = {}
-    for change in scope_changes:
-        try:
-            artifact_id, new_scope = change.split(':')
-            scope_map[artifact_id] = new_scope
-        except ValueError:
-            print(f"Error: Invalid scope change format '{change}'. Expected 'artifactId:newScope'", file=sys.stderr)
-            sys.exit(1)
-
+    scope_map = parse_artifact_changes(changes)
     verify_deps_arguments(root, set(scope_map.keys()))
 
+    modified = 0
+    qn = get_qn_lambda(root)
     for dep in iter_deps(root):
         art = dep.find(qn('artifactId'))
         if art is not None and art.text in scope_map:
@@ -58,26 +63,16 @@ def change_dependency_scopes(root: ET.Element, scope_changes: Iterable[str]) -> 
     return modified
 
 
-def change_dependency_version(root: ET.Element, scope_changes: Iterable[str]) -> int:
+def change_dependency_version(root: ET.Element, changes: Iterable[str]) -> int:
     """
     Change or add <version> elements in dependencies based on 'artifactId:version' pairs.
     Returns number of dependencies modified.
     """
-    modified = 0
-    qn = get_qn_lambda(root)
-
-    # Parse the version changes into a dict
-    version_map = {}
-    for change in scope_changes:  # keeping param name for backward compatibility with any external callers
-        try:
-            artifact_id, new_version = change.split(':')
-            version_map[artifact_id] = new_version
-        except ValueError:
-            print(f"Error: Invalid version change format '{change}'. Expected 'artifactId:newVersion'", file=sys.stderr)
-            sys.exit(1)
-
+    version_map = parse_artifact_changes(changes)
     verify_deps_arguments(root, set(version_map.keys()))
 
+    modified = 0
+    qn = get_qn_lambda(root)
     for dep in iter_deps(root):
         art = dep.find(qn('artifactId'))
         if art is not None and art.text in version_map:
@@ -89,6 +84,7 @@ def change_dependency_version(root: ET.Element, scope_changes: Iterable[str]) ->
             modified += 1
 
     return modified
+
 
 def parse_args(argv=None):
     import argparse
