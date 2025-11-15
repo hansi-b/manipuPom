@@ -9,8 +9,7 @@ from pom_utils import get_qn_lambda, iter_deps, read_pom
 
 def find_poms_in_dir(dir_path: Path) -> list[Path]:
     """Find all pom.xml files under the given directory using pathlib.rglob."""
-    root = Path(dir_path)
-    return sorted(root.rglob('pom.xml'))
+    return sorted(Path(dir_path).rglob('pom.xml'))
 
 def extract_dependencies(pom_path: Path, include_group_id: bool = False, included_groups: set[str] = None, excluded_groups: set[str] = None) -> tuple[str, list[str]]:
     """Extract dependency artifactIds from a pom.xml file.
