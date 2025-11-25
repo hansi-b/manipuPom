@@ -34,11 +34,10 @@ def find_poms(root: Path) -> list[Path]:
     return sorted(root.rglob("pom.xml"))
 
 
-def update_parent_version_in_pom(pom_path: Path, new_version: str) -> tuple[bool, str | None, str | None]:
+def update_parent_version_in_pom(pom_path: Path, new_version: str) -> tuple[str | None, str | None]:
     """Update the parent version in a single pom.xml file.
 
-    Returns (modified, old_version, xml_text) where:
-        modified: True if the file's parent version was changed
+    Returns (old_version, xml_text) where:
         old_version: previous version string (None if no parent/version found)
         xml_text: the updated XML as string ready to be written, or None if not modified
     """
@@ -47,14 +46,14 @@ def update_parent_version_in_pom(pom_path: Path, new_version: str) -> tuple[bool
 
     parent_elem = root.find(qn("parent"))
     if parent_elem is None:
-        return False, None, None
+        return None, None
     ver_elem = parent_elem.find(qn("version"))
     if ver_elem is None or ver_elem.text is None:
-        return False, None, None
+        return None, None
 
     old_version = ver_elem.text.strip()
     if old_version == new_version:
-        return False, old_version, None
+        return old_version, None
 
     # Register namespace (if any) for clean writing
     ns = get_default_namespace(root)
@@ -64,7 +63,7 @@ def update_parent_version_in_pom(pom_path: Path, new_version: str) -> tuple[bool
     ver_elem.text = new_version
     # Produce updated XML text for writing by caller
     xml_text = ET.tostring(root, encoding='unicode')
-    return True, old_version, xml_text
+    return old_version, xml_text
 
 
 def process_poms_under(root_dir: Path, new_version: str, write: bool) -> list[tuple[Path, str, str]]:
@@ -76,16 +75,16 @@ def process_poms_under(root_dir: Path, new_version: str, write: bool) -> list[tu
     for pom in find_poms(root_dir):
         # Use the helper function to update and obtain results
         try:
-            modified, old_version, xml_text = update_parent_version_in_pom(pom, new_version)
+            old_version, xml_text = update_parent_version_in_pom(pom, new_version)
         except Exception as e:  # pragma: no cover - robust to parse errors
             print(f"Warning: Failed to parse {pom}: {e}", file=sys.stderr)
             continue
 
-        if not modified:
+        if xml_text is None:
             continue
 
         # Optionally write back to disk
-        if write and xml_text is not None:
+        if write:
             import shutil
             backup = pom.with_suffix('.xml.bak')
             shutil.copy2(pom, backup)

@@ -31,31 +31,29 @@ def make_pom_with_parent(version: str, ns: str = None) -> str:
 def test_update_parent_version_in_pom(tmp_path):
     pom_path = tmp_path / "pom.xml"
     pom_path.write_text(make_pom_with_parent("1.0.0"))
-    modified, old_version, xml_text = mod_parent.update_parent_version_in_pom(pom_path, "2.0.0")
-    assert modified is True
+    old_version, xml_text = mod_parent.update_parent_version_in_pom(pom_path, "2.0.0")
     assert old_version == "1.0.0"
     assert "<version>2.0.0</version>" in xml_text
     # Should not modify if already up to date
     pom_path.write_text(make_pom_with_parent("2.0.0"))
-    modified, old_version = mod_parent.update_parent_version_in_pom(pom_path, "2.0.0")[:2]
-    assert modified is False
+    old_version, xml_text = mod_parent.update_parent_version_in_pom(pom_path, "2.0.0")
     assert old_version == "2.0.0"
+    assert xml_text is None
 
 def test_update_parent_version_in_pom_with_namespace(tmp_path):
     ns = "http://maven.apache.org/POM/4.0.0"
     pom_path = tmp_path / "pom.xml"
     pom_path.write_text(make_pom_with_parent("1.0.0", ns=ns))
-    modified, old_version, xml_text = mod_parent.update_parent_version_in_pom(pom_path, "3.1.4")
-    assert modified is True
+    old_version, xml_text = mod_parent.update_parent_version_in_pom(pom_path, "3.1.4")
     assert old_version == "1.0.0"
     assert "<version>3.1.4</version>" in xml_text
 
 def test_update_parent_version_in_pom_no_parent(tmp_path):
     pom_path = tmp_path / "pom.xml"
     pom_path.write_text("""<project><artifactId>child</artifactId></project>""")
-    modified, old_version = mod_parent.update_parent_version_in_pom(pom_path, "2.0.0")[:2]
-    assert modified is False
+    old_version, xml_text = mod_parent.update_parent_version_in_pom(pom_path, "2.0.0")
     assert old_version is None
+    assert xml_text is None
 
 def test_process_poms_under(tmp_path):
     # Create two POMs, one with parent, one without
