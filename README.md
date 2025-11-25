@@ -16,6 +16,8 @@ This repository contains:
   `.bak` backup of the original file.
 - `src/deps_tree.py` — Script to generate dependency graphs from Maven projects. It can analyze multiple
   POM files in a directory structure and output the dependency relationships in either PlantUML or JSON format.
+- `src/mod_parent.py` — Script to update `<parent><version>` in multiple POM files. Works recursively and can
+  update many POMs in place or perform a dry-run.
 - `tests/` — pytest-based unit tests.
 - `tests/data/` — test data used by the test suite.
 - `requirements.txt` — development/test dependencies (currently
@@ -40,6 +42,13 @@ This repository contains:
 - Filter dependencies by including or excluding specific groupIds.
 - Flexible node naming with optional groupId inclusion.
 - Support writing output to files or standard output.
+
+### mod_parent.py
+
+- Update `<parent><version>` entries across multiple POM files under a directory root.
+- By default the script runs a dry-run and prints a summary; use `--write` to persist changes.
+- Creates a backup of the original file when writing; backup file is named `pom.xml.bak` (for input `pom.xml`).
+- Namespace-aware: handles POMs with a default namespace on the `<project>` element.
 
 ## Requirements
 
@@ -110,6 +119,17 @@ python3 src/deps_tree.py path/to/maven/project --exclude-groups org.apache.loggi
 
 # Combine options
 python3 src/deps_tree.py path/to/maven/project --add-group-id --include-groups org.springframework --format json
+```
+
+To update parent versions across a directory of POMs:
+
+```bash
+# Dry-run (default) - show which POMs would be updated
+python3 src/mod_parent.py path/to/maven/root 3.2.0
+
+# Write changes and create backups
+python3 src/mod_parent.py path/to/maven/root 3.2.0 --write
+
 ```
 
 Notes about behavior
