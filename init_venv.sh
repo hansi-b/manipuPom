@@ -1,6 +1,6 @@
-rm -rf venv
-python3 -m venv venv
+rm -rf .venv
+python3 -m venv .venv
 
-. venv/bin/activate
+. .venv/bin/activate
 pip install -U pip setuptools
 pip install -r requirements.txt

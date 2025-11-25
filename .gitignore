@@ -39,3 +39,4 @@ htmlcov/
 .mypy_cache/
 .pyre/
 __pypackages__/
+.venv
