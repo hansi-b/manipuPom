@@ -8,6 +8,77 @@ from pathlib import Path
 import argparse
 import json
 
+
+def _trim_error_block(block: list[str]) -> list[str]:
+    """Trim any lines starting from the stack-trace hint line in an error block.
+
+    Remove the line containing the Maven stack trace hint ("To see the full stack trace") and any
+    subsequent lines.
+    """
+    if not block:
+        return block
+    stop_msg = "[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch."
+    for idx, l in enumerate(block):
+        if stop_msg in l:
+            return block[:idx]
+    return block
+
+
+def _process_log_file(log_file: Path) -> dict:
+    """Process a single log file and return its detection/classification data.
+
+    Returns a dict with keys:
+      - filename: str
+      - detected_success: bool
+      - detected_failure: bool
+      - file_error_class: str | None
+      - last_error_block: list[str] (trimmed)
+      - unreadable: bool
+    """
+    # Initialize
+    detected_success = False
+    detected_failure = False
+    file_error_class = None
+    last_error_block: list[str] = []
+    current_error_block: list[str] = []
+    unreadable = False
+
+    try:
+        with open(log_file, 'rb') as f:
+            for byte_line in f:
+                try:
+                    line = byte_line.decode('utf-8')
+                except UnicodeDecodeError:
+                    continue
+                if "BUILD SUCCESS" in line:
+                    detected_success = True
+                if "BUILD FAILURE" in line:
+                    detected_failure = True
+                if (not file_error_class) and "Could not resolve dependencies" in line:
+                    file_error_class = "Dependency Resolution"
+                elif (not file_error_class) and "Compilation failure" in line:
+                    file_error_class = "Compilation Failure"
+                if ('[ERROR]' in line) or line.lstrip().startswith('ERROR'):
+                    current_error_block.append(line.strip())
+                else:
+                    if current_error_block:
+                        last_error_block = current_error_block
+                        current_error_block = []
+    except Exception:
+        unreadable = True
+
+    if current_error_block:
+        last_error_block = current_error_block
+
+    return {
+        'filename': log_file.name,
+        'detected_success': detected_success,
+        'detected_failure': detected_failure,
+        'file_error_class': file_error_class,
+        'last_error_block': _trim_error_block(last_error_block) if last_error_block else [],
+        'unreadable': unreadable,
+    }
+
 def evaluate_build_logs_data(log_dir: Path) -> dict:
     """Return structured data about build log evaluation.
 
@@ -20,75 +91,26 @@ def evaluate_build_logs_data(log_dir: Path) -> dict:
     unreadable_files: list[str] = []
     error_blocks: dict[str, list[str]] = {}
 
-    def _trim_error_block(block: list[str]) -> list[str]:
-        """Trim any lines starting from the stack-trace hint line in an error block.
-
-        Remove the line containing the Maven stack trace hint ("To see the full stack trace") and any
-        subsequent lines.
-        """
-        if not block:
-            return block
-        stop_msg = "[ERROR] To see the full stack trace of the errors"
-        for idx, l in enumerate(block):
-            if stop_msg in l:
-                return block[:idx]
-        return block
-
     for log_file in sorted(log_dir.glob('*.log')):
         print(f"Reading {log_file}...")
-        detected_success = False
-        detected_failure = False
-        # Classification flags for this file
-        file_error_class = None
-        # Track consecutive ERROR line blocks: last_error_block contains the last seen
-        # consecutive block of lines that include an ERROR marker; current_error_block
-        # accumulates while consecutive ERROR lines are encountered.
-        last_error_block: list[str] = []
-        current_error_block: list[str] = []
-
-        try:
-            with open(log_file, 'rb') as f:
-                for byte_line in f:
-                    try:
-                        line = byte_line.decode('utf-8')
-                    except UnicodeDecodeError:
-                        continue
-                    if "BUILD SUCCESS" in line:
-                        detected_success = True
-                    if "BUILD FAILURE" in line:
-                        detected_failure = True
-                    if (not file_error_class) and "Could not resolve dependencies" in line:
-                        file_error_class = "Dependency Resolution"
-                    elif (not file_error_class) and "Compilation failure" in line:
-                        file_error_class = "Compilation Failure"
-                    # Track ERROR blocks - Maven often uses '[ERROR]' prefix
-                    if ('[ERROR]' in line) or line.lstrip().startswith('ERROR'):
-                        current_error_block.append(line.strip())
-                    else:
-                        if current_error_block:
-                            last_error_block = current_error_block
-                            current_error_block = []
-        except Exception:
-            unreadable_files.append(log_file.name)
+        entry = _process_log_file(log_file)
+        if entry['unreadable']:
+            unreadable_files.append(entry['filename'])
+            if entry['last_error_block']:
+                error_blocks[entry['filename']] = entry['last_error_block']
             continue
-
-        # If the file ended while we were in an ERROR block, update last_error_block
-        if current_error_block:
-            last_error_block = current_error_block
-
-        if detected_success:
-            success_files.append(log_file.name)
-        elif detected_failure:
+        if entry['detected_success']:
+            success_files.append(entry['filename'])
+        elif entry['detected_failure']:
             failure_count += 1
-            group_key = file_error_class or "Other Errors"
-            failure_files_by_type.setdefault(group_key, []).append(log_file.name)
-            # Record the error block for this failing file
-            if last_error_block:
-                error_blocks[log_file.name] = _trim_error_block(last_error_block)
+            group_key = entry['file_error_class'] or "Other Errors"
+            failure_files_by_type.setdefault(group_key, []).append(entry['filename'])
+            if entry['last_error_block']:
+                error_blocks[entry['filename']] = entry['last_error_block']
         else:
-            unreadable_files.append(log_file.name)
-            if last_error_block:
-                error_blocks[log_file.name] = _trim_error_block(last_error_block)
+            unreadable_files.append(entry['filename'])
+            if entry['last_error_block']:
+                error_blocks[entry['filename']] = entry['last_error_block']
 
     total_evaluated = len(success_files) + failure_count
     return {
