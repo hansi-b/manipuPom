@@ -51,3 +51,35 @@ def test_write_report_to_file(tmp_path):
     assert outfile.exists()
     content = outfile.read_text(encoding='utf-8')
     assert "Successful Builds" in content
+
+
+def test_evaluate_build_logs_json_data(tmp_path):
+    # Create success and failure logs as before
+    (tmp_path / 'success.log').write_text("BUILD SUCCESS\n")
+    failure_log = tmp_path / 'failure.log'
+    with open(failure_log, 'wb') as f:
+        f.write(b"BUILD FAILURE\n")
+        f.write(b"Compilation failure: details here\n")
+
+    data = ev.evaluate_build_logs_data(tmp_path)
+    assert isinstance(data, dict)
+    assert data['total_evaluated'] == 2
+    assert data['failure_count'] == 1
+    assert 'Compilation Failure' in data['failure_files_by_type']
+    assert 'failure.log' in data['failure_files_by_type']['Compilation Failure']
+
+
+def test_generate_json_report_and_write(tmp_path):
+    (tmp_path / 'ok.log').write_text("BUILD SUCCESS\n")
+    data = ev.evaluate_build_logs_data(tmp_path)
+    json_report = ev.generate_json_report(data, pretty=True)
+    # Validate JSON parsing
+    import json as _json
+    parsed = _json.loads(json_report)
+    assert parsed['success_files'] == ['ok.log']
+    outfile = tmp_path / 'report.json'
+    ev.write_report_to_file(json_report, outfile)
+    assert outfile.exists()
+    content = outfile.read_text(encoding='utf-8')
+    parsed2 = _json.loads(content)
+    assert parsed2['success_files'] == ['ok.log']

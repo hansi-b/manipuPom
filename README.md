@@ -150,6 +150,9 @@ python3 src/evaluate_mvn_build.py path/to/log/dir
 
 # Write report to a file
 python3 src/evaluate_mvn_build.py path/to/log/dir --outfile mvn-report.txt
+
+# Write JSON report to a file
+python3 src/evaluate_mvn_build.py path/to/log/dir --format json --outfile mvn-report.json
 ```
 
 Notes about behavior

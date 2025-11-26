@@ -6,14 +6,13 @@ Classify the errors into different categories and print a summary report.
 import sys
 from pathlib import Path
 import argparse
+import json
 
-def evaluate_build_logs(log_dir: Path) -> str:
-    """
-    Evaluate Maven build logs in the given directory and return a detailed summary report.
+def evaluate_build_logs_data(log_dir: Path) -> dict:
+    """Return structured data about build log evaluation.
 
-    - Reads logs in binary mode and decodes them line-by-line using UTF-8.
-      Lines that cannot be decoded due to encoding errors are skipped.
-    - Returns a report listing each successful log and grouped failures with file names.
+    This returns a dict with keys: 'total_evaluated', 'success_files',
+    'failure_count', 'failure_files_by_type', 'unreadable_files'.
     """
     success_files: list[str] = []
     failure_files_by_type: dict[str, list[str]] = {}
@@ -26,14 +25,12 @@ def evaluate_build_logs(log_dir: Path) -> str:
         detected_failure = False
         # Classification flags for this file
         file_error_class = None
-        # Read the file in binary mode and decode line-by-line; skip lines that fail to decode
         try:
             with open(log_file, 'rb') as f:
                 for byte_line in f:
                     try:
                         line = byte_line.decode('utf-8')
                     except UnicodeDecodeError:
-                        # Skip this line if it contains undecodable bytes
                         continue
                     if "BUILD SUCCESS" in line:
                         detected_success = True
@@ -43,9 +40,7 @@ def evaluate_build_logs(log_dir: Path) -> str:
                         file_error_class = "Dependency Resolution"
                     elif (not file_error_class) and "Compilation failure" in line:
                         file_error_class = "Compilation Failure"
-                    # keep scanning; we only need to know if success/failure occurred somewhere
         except Exception:
-            # If the file cannot be opened or read, list it as unreadable and continue
             unreadable_files.append(log_file.name)
             continue
 
@@ -56,10 +51,32 @@ def evaluate_build_logs(log_dir: Path) -> str:
             group_key = file_error_class or "Other Errors"
             failure_files_by_type.setdefault(group_key, []).append(log_file.name)
         else:
-            # If neither marker is present, consider the log unreadable or inconclusive
             unreadable_files.append(log_file.name)
 
     total_evaluated = len(success_files) + failure_count
+    return {
+        'total_evaluated': total_evaluated,
+        'success_files': success_files,
+        'failure_count': failure_count,
+        'failure_files_by_type': failure_files_by_type,
+        'unreadable_files': unreadable_files,
+    }
+
+
+def evaluate_build_logs(log_dir: Path) -> str:
+    """
+    Evaluate Maven build logs in the given directory and return a detailed summary report.
+
+    - Reads logs in binary mode and decodes them line-by-line using UTF-8.
+      Lines that cannot be decoded due to encoding errors are skipped.
+    - Returns a report listing each successful log and grouped failures with file names.
+    """
+    data = evaluate_build_logs_data(log_dir)
+    success_files = data['success_files']
+    failure_files_by_type = data['failure_files_by_type']
+    failure_count = data['failure_count']
+    unreadable_files = data['unreadable_files']
+    total_evaluated = data['total_evaluated']
     report_lines = [
         f"Total Builds Evaluated: {total_evaluated}",
         f"Successful Builds: {len(success_files)}",
@@ -97,10 +114,22 @@ def write_report_to_file(report: str, outfile: Path) -> None:
     with open(outfile_path, 'w', encoding='utf-8') as f:
         f.write(report)
 
+
+def generate_json_report(data: dict, pretty: bool = True) -> str:
+    """Serialize the evaluation data to JSON.
+
+    - If pretty is True, the output is indented for readability.
+    """
+    if pretty:
+        return json.dumps(data, indent=2)
+    return json.dumps(data)
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Evaluate Maven build logs in a directory.")
     p.add_argument("log_dir", help="Directory containing Maven build log files")
     p.add_argument("--outfile", "-o", help="Write the generated report to this file (optional)")
+    p.add_argument("--format", "-f", choices=["text", "json"], default="text",
+                   help="Output format for the report (text or json); default: text")
     return p.parse_args(argv)
 
 if __name__ == "__main__":
@@ -111,7 +140,12 @@ if __name__ == "__main__":
         print(f"Error: log directory does not exist or is not a directory: {log_dir}", file=sys.stderr)
         sys.exit(1)
 
-    report = evaluate_build_logs(log_dir)
+    if getattr(args, 'format', 'text') == 'json':
+        data = evaluate_build_logs_data(log_dir)
+        report = generate_json_report(data, pretty=True)
+    else:
+        report = evaluate_build_logs(log_dir)
+
     if getattr(args, 'outfile', None):
         try:
             write_report_to_file(report, Path(args.outfile))
