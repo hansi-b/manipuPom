@@ -38,3 +38,16 @@ def test_evaluate_build_logs_with_undecodable_lines(tmp_path):
     assert "- success.log" in report
     assert "Compilation Failure: 1" in report
     assert "- failure.log" in report
+
+
+def test_write_report_to_file(tmp_path):
+    # Create a simple success log
+    (tmp_path / 'ok.log').write_text("BUILD SUCCESS\n")
+
+    report = ev.evaluate_build_logs(tmp_path)
+    outfile = tmp_path / 'report.txt'
+    # Use the helper function to write the report
+    ev.write_report_to_file(report, outfile)
+    assert outfile.exists()
+    content = outfile.read_text(encoding='utf-8')
+    assert "Successful Builds" in content

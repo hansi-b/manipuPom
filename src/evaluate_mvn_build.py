@@ -85,9 +85,22 @@ def evaluate_build_logs(log_dir: Path) -> str:
 
     return "\n".join(report_lines)
 
+
+def write_report_to_file(report: str, outfile: Path) -> None:
+    """Write the given report to the provided outfile path using UTF-8 encoding.
+
+    Creating parent directories if necessary and overwriting any existing file.
+    """
+    outfile_path = Path(outfile)
+    if not outfile_path.parent.exists():
+        outfile_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(outfile_path, 'w', encoding='utf-8') as f:
+        f.write(report)
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Evaluate Maven build logs in a directory.")
     p.add_argument("log_dir", help="Directory containing Maven build log files")
+    p.add_argument("--outfile", "-o", help="Write the generated report to this file (optional)")
     return p.parse_args(argv)
 
 if __name__ == "__main__":
@@ -99,4 +112,12 @@ if __name__ == "__main__":
         sys.exit(1)
 
     report = evaluate_build_logs(log_dir)
-    print(report)
+    if getattr(args, 'outfile', None):
+        try:
+            write_report_to_file(report, Path(args.outfile))
+            print(f"Wrote report to {args.outfile}")
+        except Exception as e:
+            print(f"Error writing report to {args.outfile}: {e}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        print(report)

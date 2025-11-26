@@ -18,6 +18,8 @@ This repository contains:
   POM files in a directory structure and output the dependency relationships in either PlantUML or JSON format.
 - `src/mod_parent.py` — Script to update `<parent><version>` in multiple POM files. Works recursively and can
   update many POMs in place or perform a dry-run.
+- `src/evaluate_mvn_build.py` — Script to evaluate Maven build logs in a directory and produce a human-friendly report
+  listing successful builds, failure groups, and unreadable/inconclusive logs.
 - `tests/` — pytest-based unit tests.
 - `tests/data/` — test data used by the test suite.
 - `requirements.txt` — development/test dependencies (currently
@@ -49,6 +51,14 @@ This repository contains:
 - By default the script runs a dry-run and prints a summary; use `--write` to persist changes.
 - Creates a backup of the original file when writing; backup file is named `pom.xml.bak` (for input `pom.xml`).
 - Namespace-aware: handles POMs with a default namespace on the `<project>` element.
+
+### evaluate_mvn_build.py
+
+- Evaluate Maven build logs inside a directory (wildcard `*.log`) and produce a detailed human-friendly report.
+- Reads logs in binary mode and decodes lines using UTF-8; lines that cannot be decoded are skipped.
+- Groups failures by category (e.g., "Dependency Resolution", "Compilation Failure") and includes the filenames for each group.
+- Lists successful builds (filenames) and reports unreadable / inconclusive logs.
+- Optional `--outfile` flag writes the report to a file instead of printing to stdout.
 
 ## Requirements
 
@@ -130,6 +140,16 @@ python3 src/mod_parent.py path/to/maven/root 3.2.0
 # Write changes and create backups
 python3 src/mod_parent.py path/to/maven/root 3.2.0 --write
 
+```
+
+To evaluate Maven build logs and produce a detailed report:
+
+```bash
+# Basic report to stdout
+python3 src/evaluate_mvn_build.py path/to/log/dir
+
+# Write report to a file
+python3 src/evaluate_mvn_build.py path/to/log/dir --outfile mvn-report.txt
 ```
 
 Notes about behavior
