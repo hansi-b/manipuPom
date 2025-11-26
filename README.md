@@ -59,6 +59,7 @@ This repository contains:
 - Groups failures by category (e.g., "Dependency Resolution", "Compilation Failure") and includes the filenames for each group.
 - Lists successful builds (filenames) and reports unreadable / inconclusive logs.
 - Optional `--outfile` flag writes the report to a file instead of printing to stdout.
+- Includes the final consecutive ERROR lines (if present) for each non-successful log in the report so you can quickly inspect the failure context.
 
 ## Requirements
 

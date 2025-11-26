@@ -18,6 +18,21 @@ def evaluate_build_logs_data(log_dir: Path) -> dict:
     failure_files_by_type: dict[str, list[str]] = {}
     failure_count = 0
     unreadable_files: list[str] = []
+    error_blocks: dict[str, list[str]] = {}
+
+    def _trim_error_block(block: list[str]) -> list[str]:
+        """Trim any lines starting from the stack-trace hint line in an error block.
+
+        Remove the line containing the Maven stack trace hint ("To see the full stack trace") and any
+        subsequent lines.
+        """
+        if not block:
+            return block
+        stop_msg = "[ERROR] To see the full stack trace of the errors"
+        for idx, l in enumerate(block):
+            if stop_msg in l:
+                return block[:idx]
+        return block
 
     for log_file in sorted(log_dir.glob('*.log')):
         print(f"Reading {log_file}...")
@@ -25,6 +40,12 @@ def evaluate_build_logs_data(log_dir: Path) -> dict:
         detected_failure = False
         # Classification flags for this file
         file_error_class = None
+        # Track consecutive ERROR line blocks: last_error_block contains the last seen
+        # consecutive block of lines that include an ERROR marker; current_error_block
+        # accumulates while consecutive ERROR lines are encountered.
+        last_error_block: list[str] = []
+        current_error_block: list[str] = []
+
         try:
             with open(log_file, 'rb') as f:
                 for byte_line in f:
@@ -40,9 +61,20 @@ def evaluate_build_logs_data(log_dir: Path) -> dict:
                         file_error_class = "Dependency Resolution"
                     elif (not file_error_class) and "Compilation failure" in line:
                         file_error_class = "Compilation Failure"
+                    # Track ERROR blocks - Maven often uses '[ERROR]' prefix
+                    if ('[ERROR]' in line) or line.lstrip().startswith('ERROR'):
+                        current_error_block.append(line.strip())
+                    else:
+                        if current_error_block:
+                            last_error_block = current_error_block
+                            current_error_block = []
         except Exception:
             unreadable_files.append(log_file.name)
             continue
+
+        # If the file ended while we were in an ERROR block, update last_error_block
+        if current_error_block:
+            last_error_block = current_error_block
 
         if detected_success:
             success_files.append(log_file.name)
@@ -50,8 +82,13 @@ def evaluate_build_logs_data(log_dir: Path) -> dict:
             failure_count += 1
             group_key = file_error_class or "Other Errors"
             failure_files_by_type.setdefault(group_key, []).append(log_file.name)
+            # Record the error block for this failing file
+            if last_error_block:
+                error_blocks[log_file.name] = _trim_error_block(last_error_block)
         else:
             unreadable_files.append(log_file.name)
+            if last_error_block:
+                error_blocks[log_file.name] = _trim_error_block(last_error_block)
 
     total_evaluated = len(success_files) + failure_count
     return {
@@ -60,6 +97,7 @@ def evaluate_build_logs_data(log_dir: Path) -> dict:
         'failure_count': failure_count,
         'failure_files_by_type': failure_files_by_type,
         'unreadable_files': unreadable_files,
+        'error_blocks': error_blocks,
     }
 
 
@@ -92,6 +130,12 @@ def evaluate_build_logs(log_dir: Path) -> str:
             report_lines.append(f"  {error_type}: {len(files)}")
             for fn in files:
                 report_lines.append(f"    - {fn}")
+                # Include a final ERROR block for each failure file if available
+                err_block = data.get('error_blocks', {}).get(fn)
+                if err_block:
+                    report_lines.append("      Final ERROR block:")
+                    for bl in err_block:
+                        report_lines.append(f"        {bl}")
     else:
         report_lines.append("  (no failures found)")
 
@@ -99,6 +143,12 @@ def evaluate_build_logs(log_dir: Path) -> str:
         report_lines.append("Unreadable / Inconclusive logs:")
         for fn in unreadable_files:
             report_lines.append(f"  - {fn}")
+            # Also include final ERROR block if present
+            err_block = data.get('error_blocks', {}).get(fn)
+            if err_block:
+                report_lines.append("    Final ERROR block:")
+                for bl in err_block:
+                    report_lines.append(f"      {bl}")
 
     return "\n".join(report_lines)
 

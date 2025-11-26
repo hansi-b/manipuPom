@@ -83,3 +83,45 @@ def test_generate_json_report_and_write(tmp_path):
     content = outfile.read_text(encoding='utf-8')
     parsed2 = _json.loads(content)
     assert parsed2['success_files'] == ['ok.log']
+
+
+def test_final_error_block_is_captured(tmp_path):
+    # Create a failure log with multiple ERROR blocks; only the last consecutive block should be captured
+    fail_log = tmp_path / 'fail.log'
+    with open(fail_log, 'wb') as f:
+        f.write(b"Some info\n")
+        f.write(b"[ERROR] First error\n")
+        f.write(b"Info line\n")
+        f.write(b"[ERROR] Last error 1\n")
+        f.write(b"[ERROR] Last error 2\n")
+        f.write(b"BUILD FAILURE\n")
+
+    data = ev.evaluate_build_logs_data(tmp_path)
+    assert 'fail.log' in data['failure_files_by_type'].get('Other Errors', []) or 'fail.log' in sum(data['failure_files_by_type'].values(), [])
+    # The error block should be captured for this file
+    assert 'fail.log' in data['error_blocks']
+    assert data['error_blocks']['fail.log'] == ['[ERROR] Last error 1', '[ERROR] Last error 2']
+
+    # Also check textual report includes the final error block lines
+    report = ev.evaluate_build_logs(tmp_path)
+    assert 'Final ERROR block:' in report
+    assert 'Last error 1' in report
+    assert 'Last error 2' in report
+
+
+def test_trim_stop_message_removed_from_error_block(tmp_path):
+    fail_log = tmp_path / 'stopfail.log'
+    with open(fail_log, 'wb') as f:
+        f.write(b"[ERROR] Something 1\n")
+        f.write(b"[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n")
+        f.write(b"[ERROR] stacktrace line 1\n")
+        f.write(b"BUILD FAILURE\n")
+
+    data = ev.evaluate_build_logs_data(tmp_path)
+    # The error block should be trimmed to only include lines before the stop message
+    assert 'stopfail.log' in data['error_blocks']
+    assert data['error_blocks']['stopfail.log'] == ['[ERROR] Something 1']
+    # Text report should not include the stop message or stacktrace lines
+    txt = ev.evaluate_build_logs(tmp_path)
+    assert 'To see the full stack trace' not in txt
+    assert 'stacktrace line 1' not in txt
