@@ -18,8 +18,9 @@ def _trim_error_block(block: list[str]) -> list[str]:
     if not block:
         return block
     stop_msg = "[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch."
+    help_msg = "[ERROR] -> [Help 1]"
     for idx, l in enumerate(block):
-        if stop_msg in l:
+        if stop_msg in l or help_msg in l:
             return block[:idx]
     return block
 

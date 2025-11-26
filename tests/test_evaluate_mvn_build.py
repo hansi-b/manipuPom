@@ -125,3 +125,19 @@ def test_trim_stop_message_removed_from_error_block(tmp_path):
     txt = ev.evaluate_build_logs(tmp_path)
     assert 'To see the full stack trace' not in txt
     assert 'stacktrace line 1' not in txt
+
+
+def test_trim_help_message_removed_from_error_block(tmp_path):
+    fail_log = tmp_path / 'helpfail.log'
+    with open(fail_log, 'wb') as f:
+        f.write(b"[ERROR] Something else\n")
+        f.write(b"[ERROR] -> [Help 1]\n")
+        f.write(b"[ERROR] trailing detail\n")
+        f.write(b"BUILD FAILURE\n")
+
+    data = ev.evaluate_build_logs_data(tmp_path)
+    assert 'helpfail.log' in data['error_blocks']
+    assert data['error_blocks']['helpfail.log'] == ['[ERROR] Something else']
+    txt = ev.evaluate_build_logs(tmp_path)
+    assert '-> [Help 1]' not in txt
+    assert 'trailing detail' not in txt
