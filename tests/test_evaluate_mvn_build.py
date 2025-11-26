@@ -33,3 +33,8 @@ def test_evaluate_build_logs_with_undecodable_lines(tmp_path):
     assert "Failed Builds: 1" in report
     # Should classify the failure as Compilation Failure
     assert "Compilation Failure: 1" in report
+    # Verify that the report lists the successful filename and the failure filename
+    assert "Successful build files:" in report
+    assert "- success.log" in report
+    assert "Compilation Failure: 1" in report
+    assert "- failure.log" in report

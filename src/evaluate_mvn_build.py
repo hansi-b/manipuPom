@@ -9,15 +9,16 @@ import argparse
 
 def evaluate_build_logs(log_dir: Path) -> str:
     """
-    Evaluate Maven build logs in the given directory and return a summary report.
-    
-    This function reads logs in binary mode and decodes them line-by-line using UTF-8.
-    Lines that cannot be decoded due to encoding errors are skipped; this allows parsing
-    logs produced in mixed encodings without failing with UnicodeDecodeError.
+    Evaluate Maven build logs in the given directory and return a detailed summary report.
+
+    - Reads logs in binary mode and decodes them line-by-line using UTF-8.
+      Lines that cannot be decoded due to encoding errors are skipped.
+    - Returns a report listing each successful log and grouped failures with file names.
     """
-    success_count = 0
+    success_files: list[str] = []
+    failure_files_by_type: dict[str, list[str]] = {}
     failure_count = 0
-    error_types: dict[str, int] = {}
+    unreadable_files: list[str] = []
 
     for log_file in sorted(log_dir.glob('*.log')):
         print(f"Reading {log_file}...")
@@ -26,39 +27,61 @@ def evaluate_build_logs(log_dir: Path) -> str:
         # Classification flags for this file
         file_error_class = None
         # Read the file in binary mode and decode line-by-line; skip lines that fail to decode
-        with open(log_file, 'rb') as f:
-            for byte_line in f:
-                try:
-                    line = byte_line.decode('utf-8')
-                except UnicodeDecodeError:
-                    # Skip this line if it contains undecodable bytes
-                    continue
-                if "BUILD SUCCESS" in line:
-                    detected_success = True
-                if "BUILD FAILURE" in line:
-                    detected_failure = True
-                if not file_error_class and "Could not resolve dependencies" in line:
-                    file_error_class = "Dependency Resolution"
-                elif not file_error_class and "Compilation failure" in line:
-                    file_error_class = "Compilation Failure"
-                # keep scanning; we only need to know if success/failure occurred somewhere
+        try:
+            with open(log_file, 'rb') as f:
+                for byte_line in f:
+                    try:
+                        line = byte_line.decode('utf-8')
+                    except UnicodeDecodeError:
+                        # Skip this line if it contains undecodable bytes
+                        continue
+                    if "BUILD SUCCESS" in line:
+                        detected_success = True
+                    if "BUILD FAILURE" in line:
+                        detected_failure = True
+                    if (not file_error_class) and "Could not resolve dependencies" in line:
+                        file_error_class = "Dependency Resolution"
+                    elif (not file_error_class) and "Compilation failure" in line:
+                        file_error_class = "Compilation Failure"
+                    # keep scanning; we only need to know if success/failure occurred somewhere
+        except Exception:
+            # If the file cannot be opened or read, list it as unreadable and continue
+            unreadable_files.append(log_file.name)
+            continue
+
         if detected_success:
-            success_count += 1
+            success_files.append(log_file.name)
         elif detected_failure:
             failure_count += 1
-            if file_error_class:
-                error_types[file_error_class] = error_types.get(file_error_class, 0) + 1
-            else:
-                error_types["Other Errors"] = error_types.get("Other Errors", 0) + 1
+            group_key = file_error_class or "Other Errors"
+            failure_files_by_type.setdefault(group_key, []).append(log_file.name)
+        else:
+            # If neither marker is present, consider the log unreadable or inconclusive
+            unreadable_files.append(log_file.name)
 
+    total_evaluated = len(success_files) + failure_count
     report_lines = [
-        f"Total Builds Evaluated: {success_count + failure_count}",
-        f"Successful Builds: {success_count}",
-        f"Failed Builds: {failure_count}",
-        "Error Classification:"
+        f"Total Builds Evaluated: {total_evaluated}",
+        f"Successful Builds: {len(success_files)}",
     ]
-    for error_type, count in error_types.items():
-        report_lines.append(f"  {error_type}: {count}")
+    if success_files:
+        report_lines.append("Successful build files:")
+        for s in success_files:
+            report_lines.append(f"  - {s}")
+    report_lines.append(f"Failed Builds: {failure_count}")
+    report_lines.append("Failure Classification:")
+    if failure_files_by_type:
+        for error_type, files in failure_files_by_type.items():
+            report_lines.append(f"  {error_type}: {len(files)}")
+            for fn in files:
+                report_lines.append(f"    - {fn}")
+    else:
+        report_lines.append("  (no failures found)")
+
+    if unreadable_files:
+        report_lines.append("Unreadable / Inconclusive logs:")
+        for fn in unreadable_files:
+            report_lines.append(f"  - {fn}")
 
     return "\n".join(report_lines)
 
