@@ -143,6 +143,21 @@ python3 src/mod_parent.py path/to/maven/root 3.2.0 --write
 
 ```
 
+Filter updates by parent artifactIds (comma-separated):
+
+```
+# Only update POMs whose <parent><artifactId> is one of 'company-parent' or 'platform-parent'
+python3 src/mod_parent.py path/to/maven/root 3.2.0 --matching-parents company-parent,platform-parent
+
+# Combine with --write to persist changes
+python3 src/mod_parent.py path/to/maven/root 3.2.0 --write --matching-parents company-parent,platform-parent
+```
+
+Notes:
+- The `--matching-parents` flag performs exact string matching on `<parent><artifactId>` values.
+- Whitespace around commas is trimmed (e.g. `a-parent, b-parent` works).
+- If provided, only POMs whose parent artifactId is in the set are considered; others are skipped silently.
+
 To evaluate Maven build logs and produce a detailed report:
 
 ```bash

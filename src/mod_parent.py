@@ -34,7 +34,7 @@ def find_poms(root: Path) -> list[Path]:
     return sorted(root.rglob("pom.xml"))
 
 
-def update_parent_version_in_pom(pom_path: Path, new_version: str) -> tuple[str | None, str | None]:
+def update_parent_version_in_pom(pom_path: Path, new_version: str, parent_artifact_ids: set[str] | None = None) -> tuple[str | None, str | None]:
     """Update the parent version in a single pom.xml file.
 
     Returns (old_version, xml_text) where:
@@ -47,6 +47,11 @@ def update_parent_version_in_pom(pom_path: Path, new_version: str) -> tuple[str 
     parent_elem = root.find(qn("parent"))
     if parent_elem is None:
         return None, None
+    # If a filter for parent artifactId is provided, ensure it matches
+    if parent_artifact_ids is not None:
+        art_elem = parent_elem.find(qn("artifactId"))
+        if art_elem is None or art_elem.text is None or art_elem.text.strip() not in parent_artifact_ids:
+            return None, None
     ver_elem = parent_elem.find(qn("version"))
     if ver_elem is None or ver_elem.text is None:
         return None, None
@@ -66,7 +71,7 @@ def update_parent_version_in_pom(pom_path: Path, new_version: str) -> tuple[str 
     return old_version, xml_text
 
 
-def process_poms_under(root_dir: Path, new_version: str, write: bool) -> list[tuple[Path, str, str]]:
+def process_poms_under(root_dir: Path, new_version: str, write: bool, parent_artifact_ids: set[str] | None = None) -> list[tuple[Path, str, str]]:
     """Scan all pom.xml under root_dir, updating parent version.
 
     Returns a list of tuples (pom_path, old_version, new_version) for changed files.
@@ -75,7 +80,7 @@ def process_poms_under(root_dir: Path, new_version: str, write: bool) -> list[tu
     for pom in find_poms(root_dir):
         # Use the helper function to update and obtain results
         try:
-            old_version, xml_text = update_parent_version_in_pom(pom, new_version)
+            old_version, xml_text = update_parent_version_in_pom(pom, new_version, parent_artifact_ids)
         except Exception as e:  # pragma: no cover - robust to parse errors
             print(f"Warning: Failed to parse {pom}: {e}", file=sys.stderr)
             continue
@@ -101,6 +106,7 @@ def parse_args(argv: Iterable[str] | None = None):
     p.add_argument("root", help="Root directory to search recursively for pom.xml files")
     p.add_argument("version", help="New parent version to set")
     p.add_argument("--write", "-w", action="store_true", help="Persist changes (otherwise show a dry-run summary)")
+    p.add_argument("--matching-parents", dest="matching_parents", help="Comma-separated list of parent artifactIds to match (exact). Only matching parents are updated.", default=None)
     return p.parse_args(argv)
 
 
@@ -111,7 +117,12 @@ def main(argv: Iterable[str] | None = None):
         print(f"Error: root directory does not exist: {root_dir}", file=sys.stderr)
         sys.exit(1)
 
-    changed = process_poms_under(root_dir, args.version, args.write)
+    parent_ids: set[str] | None
+    if args.matching_parents:
+        parent_ids = {p.strip() for p in args.matching_parents.split(',') if p.strip()}
+    else:
+        parent_ids = None
+    changed = process_poms_under(root_dir, args.version, args.write, parent_ids)
     if not changed:
         print("No parent versions needed updating.")
         return
