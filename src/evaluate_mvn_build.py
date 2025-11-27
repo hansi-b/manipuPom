@@ -123,10 +123,17 @@ def evaluate_build_logs_data(log_dir: Path) -> dict:
                 error_blocks[entry['filename']] = entry['last_error_block']
 
     total_evaluated = len(success_files) + failure_count
+    # Derived counts for JSON consumers
+    failure_type_counts = {k: len(v) for k, v in failure_files_by_type.items()}
+    # Place counts first to appear at the beginning of JSON output
     return {
         'total_evaluated': total_evaluated,
-        'success_files': success_files,
+        'success_count': len(success_files),
         'failure_count': failure_count,
+        'unreadable_count': len(unreadable_files),
+        'failure_type_counts': failure_type_counts,
+        # Details follow after counts
+        'success_files': success_files,
         'failure_files_by_type': failure_files_by_type,
         'unreadable_files': unreadable_files,
         'error_blocks': error_blocks,
@@ -147,10 +154,22 @@ def evaluate_build_logs(log_dir: Path) -> str:
     failure_count = data['failure_count']
     unreadable_files = data['unreadable_files']
     total_evaluated = data['total_evaluated']
-    report_lines = [
-        f"Total Builds Evaluated: {total_evaluated}",
-        f"Successful Builds: {len(success_files)}",
-    ]
+    # Header summary with totals and per-type failure counts
+    summary_line = (
+        f"Total Builds Evaluated: {total_evaluated} | Successes: {len(success_files)} | "
+        f"Failures: {failure_count} | Unreadable/Inconclusive: {len(unreadable_files)}"
+    )
+    report_lines = [summary_line]
+    if failure_files_by_type:
+        # Compose concise failure type counts line
+        type_counts = ", ".join([f"{t}: {len(fs)}" for t, fs in failure_files_by_type.items()])
+        report_lines.append(f"Failure Types: {type_counts}")
+    if unreadable_files:
+        # Compact list of unreadable/inconclusive files
+        compact_unreadable = ", ".join(sorted(unreadable_files))
+        report_lines.append(f"Unreadable/Inconclusive files: {compact_unreadable}")
+    # Preserve existing detailed sections for backward compatibility
+    report_lines.append(f"Successful Builds: {len(success_files)}")
     if success_files:
         report_lines.append("Successful build files:")
         for s in success_files:
