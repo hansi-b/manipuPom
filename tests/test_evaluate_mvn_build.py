@@ -141,3 +141,38 @@ def test_trim_help_message_removed_from_error_block(tmp_path):
     txt = ev.evaluate_build_logs(tmp_path)
     assert '-> [Help 1]' not in txt
     assert 'trailing detail' not in txt
+
+
+def test_error_block_strips_timestamps(tmp_path):
+    # Log lines with leading timestamps before [ERROR]
+    log = tmp_path / 'tsfail.log'
+    with open(log, 'wb') as f:
+        f.write(b"20:52:13,597 [ERROR] Timestamped error line 1\n")
+        f.write(b"20:52:13,600 [ERROR] Timestamped error line 2\n")
+        f.write(b"BUILD FAILURE\n")
+
+    data = ev.evaluate_build_logs_data(tmp_path)
+    assert 'tsfail.log' in data['error_blocks']
+    # Timestamps should be stripped
+    assert data['error_blocks']['tsfail.log'] == ['[ERROR] Timestamped error line 1', '[ERROR] Timestamped error line 2']
+    txt = ev.evaluate_build_logs(tmp_path)
+    assert '[ERROR] Timestamped error line 1' in txt
+    assert '20:52:13,597 [ERROR]' not in txt
+
+def test_error_block_strips_date_and_timestamp(tmp_path):
+    log = tmp_path / 'datedfail.log'
+    with open(log, 'wb') as f:
+        f.write(b"2025-11-27 20:52:13,597 [ERROR] Date stamped error line A\n")
+        f.write(b"2025-11-27T20:52:14,001 [ERROR] DateT stamped error line B\n")
+        f.write(b"BUILD FAILURE\n")
+
+    data = ev.evaluate_build_logs_data(tmp_path)
+    assert 'datedfail.log' in data['error_blocks']
+    assert data['error_blocks']['datedfail.log'] == [
+        '[ERROR] Date stamped error line A',
+        '[ERROR] DateT stamped error line B'
+    ]
+    txt = ev.evaluate_build_logs(tmp_path)
+    assert 'Date stamped error line A' in txt
+    assert '2025-11-27 20:52:13,597 [ERROR]' not in txt
+    assert '2025-11-27T20:52:14,001 [ERROR]' not in txt

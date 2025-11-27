@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 import argparse
 import json
+import re
 
 
 def _trim_error_block(block: list[str]) -> list[str]:
@@ -60,7 +61,15 @@ def _process_log_file(log_file: Path) -> dict:
                 elif (not file_error_class) and "Compilation failure" in line:
                     file_error_class = "Compilation Failure"
                 if ('[ERROR]' in line) or line.lstrip().startswith('ERROR'):
-                    current_error_block.append(line.strip())
+                    cleaned = line.strip()
+                    # Remove leading timestamp pattern (HH:MM:SS,mmm) directly preceding an [ERROR] tag
+                    # Strip leading timestamp patterns optionally including a date:
+                    # Examples removed:
+                    #   20:52:13,597 [ERROR] ...
+                    #   2025-11-27 20:52:13,597 [ERROR] ...
+                    #   2025-11-27T20:52:13,597 [ERROR] ...
+                    cleaned = re.sub(r'^(?:\d{4}-\d{2}-\d{2}[ T])?\d{2}:\d{2}:\d{2}[.,]\d{3}\s+(?=\[ERROR])', '', cleaned)
+                    current_error_block.append(cleaned)
                 else:
                     if current_error_block:
                         last_error_block = current_error_block
