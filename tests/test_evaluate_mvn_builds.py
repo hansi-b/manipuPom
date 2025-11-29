@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / 'src'
 sys.path.insert(0, str(SRC))
 
-import evaluate_mvn_build as ev
+import evaluate_mvn_builds as ev
 
 
 def test_evaluate_build_logs_with_undecodable_lines(tmp_path):
