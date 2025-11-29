@@ -65,6 +65,9 @@ def test_evaluate_build_logs_json_data(tmp_path):
     assert isinstance(data, dict)
     assert data['total_evaluated'] == 2
     assert data['failure_count'] == 1
+    # Verify timestamps inclusion keys exist (may be None if not present)
+    assert 'first_finished_at' in data
+    assert 'last_finished_at' in data
     assert 'Compilation Failure' in data['failure_files_by_type']
     assert 'failure.log' in data['failure_files_by_type']['Compilation Failure']
 
@@ -77,6 +80,9 @@ def test_generate_json_report_and_write(tmp_path):
     import json as _json
     parsed = _json.loads(json_report)
     assert parsed['success_files'] == ['ok.log']
+    # JSON output should include first/last finished timestamps keys
+    assert 'first_finished_at' in parsed
+    assert 'last_finished_at' in parsed
     outfile = tmp_path / 'report.json'
     ev.write_report_to_file(json_report, outfile)
     assert outfile.exists()
@@ -107,6 +113,23 @@ def test_final_error_block_is_captured(tmp_path):
     assert 'Final ERROR block:' in report
     assert 'Last error 1' in report
     assert 'Last error 2' in report
+
+
+def test_finished_at_timestamps_present_and_text_report(tmp_path):
+    # Create two logs with Finished at timestamps and ensure range inclusion
+    (tmp_path / 'a.log').write_text("20:00:00,000 [INFO] Finished at: 2025-11-26T18:32:09+01:00\nBUILD SUCCESS\n")
+    (tmp_path / 'b.log').write_text("20:00:00,000 [INFO] Finished at: 2025-11-27T18:32:09+01:00\nBUILD FAILURE\n")
+    data = ev.evaluate_build_logs_data(tmp_path)
+    assert data['total_evaluated'] == 2
+    # first/last timestamp should be set and equal to the min/max of the two
+    assert data['first_finished_at'] is not None
+    assert data['last_finished_at'] is not None
+    assert data['first_finished_at'] == '2025-11-26T18:32:09+01:00'
+    assert data['last_finished_at'] == '2025-11-27T18:32:09+01:00'
+    # Check textual report includes the range line
+    txt = ev.evaluate_build_logs(tmp_path)
+    assert 'Finished at range:' in txt
+    assert '2025-11-26T18:32:09+01:00 -> 2025-11-27T18:32:09+01:00' in txt
 
 
 def test_trim_stop_message_removed_from_error_block(tmp_path):

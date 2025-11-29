@@ -58,6 +58,7 @@ This repository contains:
 - Reads logs in binary mode and decodes lines using UTF-8; lines that cannot be decoded are skipped.
 - Groups failures by category (e.g., "Dependency Resolution", "Compilation Failure") and includes the filenames for each group.
 - Lists successful builds (filenames) and reports unreadable / inconclusive logs.
+- Includes the earliest and latest "Finished at:" timestamps found across all build logs, displayed at the top of the report, and returned in the JSON output as `first_finished_at` and `last_finished_at`.
 - Optional `--outfile` flag writes the report to a file instead of printing to stdout.
 - Includes the final consecutive ERROR lines (if present) for each non-successful log in the report so you can quickly inspect the failure context.
 
