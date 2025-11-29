@@ -170,6 +170,10 @@ python3 src/evaluate_mvn_builds.py path/to/log/dir --outfile mvn-report.txt
 
 # Write JSON report to a file
 python3 src/evaluate_mvn_builds.py path/to/log/dir --format json --outfile mvn-report.json
+
+Notes on `--format` and `--outfile`:
+- If you pass an outfile name ending with `.json` and do not explicitly set `--format`, the script will automatically use JSON output and write JSON into the file.
+- If you explicitly request `--format text` and also specify an outfile name that ends with `.json`, the script will print an error and exit with a non-zero status to avoid accidental mismatches between the requested text format and a `.json` output file.
 ```
 
 Notes about behavior

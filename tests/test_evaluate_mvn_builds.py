@@ -91,6 +91,22 @@ def test_generate_json_report_and_write(tmp_path):
     assert parsed2['success_files'] == ['ok.log']
 
 
+def test_parse_args_outfile_forces_json(tmp_path):
+    # Create success log for directory to keep consistent
+    (tmp_path / 'ok.log').write_text("BUILD SUCCESS\n")
+    args = ev.parse_args([str(tmp_path), '--outfile', str(tmp_path / 'report.json')])
+    # When outfile ends with .json, parse_args should set format to json
+    assert getattr(args, 'format', None) == 'json'
+
+
+def test_parse_args_text_and_json_outfile_raise(tmp_path):
+    # If user explicitly requests text format but outfile ends with .json, parse_args should exit
+    args = [str(tmp_path), '--outfile', str(tmp_path / 'report.json'), '--format', 'text']
+    with pytest.raises(SystemExit) as excinfo:
+        ev.parse_args(args)
+    assert excinfo.value.code == 1
+
+
 def test_final_error_block_is_captured(tmp_path):
     # Create a failure log with multiple ERROR blocks; only the last consecutive block should be captured
     fail_log = tmp_path / 'fail.log'

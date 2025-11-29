@@ -284,7 +284,34 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--outfile", "-o", help="Write the generated report to this file (optional)")
     p.add_argument("--format", "-f", choices=["text", "json"], default="text",
                    help="Output format for the report (text or json); default: text")
-    return p.parse_args(argv)
+    args = p.parse_args(argv)
+
+    # Helper: detect an explicit --format or -f value in argv and return it
+    def _explicit_format_value(argv_list: list[str]) -> str | None:
+        for idx, val in enumerate(argv_list):
+            if val == '-f' or val == '--format':
+                # value should be the next arg, if present
+                if idx + 1 < len(argv_list):
+                    return argv_list[idx + 1]
+                return None
+            if val.startswith('--format='):
+                return val.split('=', 1)[1]
+            if val.startswith('-f') and len(val) > 2:
+                # forms like -fjson or -ftext
+                return val[2:]
+        return None
+
+    explicit_fmt = _explicit_format_value(argv)
+    outfile = getattr(args, 'outfile', None)
+    if outfile and str(outfile).lower().endswith('.json'):
+        if explicit_fmt and explicit_fmt.lower() == 'text':
+            # Error: explicit text format and json outfile conflict
+            print("Error: requested text output (\"--format text\") conflicts with outfile name ending in '.json'", file=sys.stderr)
+            raise SystemExit(1)
+        # If no explicit format or explicit is json (or unspecified), prefer JSON
+        args.format = 'json'
+
+    return args
 
 if __name__ == "__main__":
 
