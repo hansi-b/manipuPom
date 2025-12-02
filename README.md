@@ -58,7 +58,9 @@ This repository contains:
 - Reads logs in binary mode and decodes lines using UTF-8; lines that cannot be decoded are skipped.
 - Groups failures by category (e.g., "Dependency Resolution", "Compilation Failure") and includes the filenames for each group.
 - Lists successful builds (filenames) and reports unreadable / inconclusive logs.
+- Shows a compact summary at the top: total evaluated, number of successes, failures, unreadable/inconclusive, and per-type failure counts.
 - Includes the earliest and latest "Finished at:" timestamps found across all build logs, displayed at the top of the report, and returned in the JSON output as `first_finished_at` and `last_finished_at`.
+- Strips leading timestamps (time-only or date+time) from error lines so `[ERROR]` lines are easier to read, e.g. `2025-11-27 20:52:13,597 [ERROR] ...` becomes `[ERROR] ...`.
 - Optional `--outfile` flag writes the report to a file instead of printing to stdout.
 - Includes the final consecutive ERROR lines (if present) for each non-successful log in the report so you can quickly inspect the failure context.
 
@@ -174,6 +176,63 @@ python3 src/evaluate_mvn_builds.py path/to/log/dir --format json --outfile mvn-r
 Notes on `--format` and `--outfile`:
 - If you pass an outfile name ending with `.json` and do not explicitly set `--format`, the script will automatically use JSON output and write JSON into the file.
 - If you explicitly request `--format text` and also specify an outfile name that ends with `.json`, the script will print an error and exit with a non-zero status to avoid accidental mismatches between the requested text format and a `.json` output file.
+
+Selecting error block representation (`--error-blocks`):
+
+- `grouped` (default): error blocks are grouped under their failure type in JSON (`error_blocks_by_type`), and the text report shows blocks within each failure type section.
+- `flat`: error blocks are provided per file in JSON (`error_blocks`) and used directly by the text report.
+
+Examples:
+
+```
+# Grouped (default) text
+python3 src/evaluate_mvn_builds.py path/to/log/dir --error-blocks grouped
+
+# Flat text
+python3 src/evaluate_mvn_builds.py path/to/log/dir --error-blocks flat
+
+# Grouped JSON
+python3 src/evaluate_mvn_builds.py path/to/log/dir --format json --error-blocks grouped
+
+# Flat JSON
+python3 src/evaluate_mvn_builds.py path/to/log/dir --format json --error-blocks flat
+```
+
+JSON output includes counts first for easy consumption:
+
+```
+{
+  "first_finished_at": "2025-11-27T20:51:00+00:00",
+  "last_finished_at": "2025-11-27T21:05:42+00:00",
+  "total_evaluated": 12,
+  "success_count": 9,
+  "failure_count": 3,
+  "unreadable_count": 0,
+  "failure_type_counts": {
+    "Compilation Failure": 2,
+    "Dependency Resolution": 1
+  },
+  "success_files": ["ok1.log", "ok2.log"],
+  "failure_files_by_type": {
+    "Compilation Failure": ["c1.log", "c2.log"],
+    "Dependency Resolution": ["d1.log"]
+  },
+  "unreadable_files": [],
+  "error_blocks": {
+    "c1.log": ["[ERROR] ..."],
+    "d1.log": ["[ERROR] ..."]
+  },
+  "error_blocks_by_type": {
+    "Compilation Failure": {
+      "c1.log": ["[ERROR] ..."],
+      "c2.log": ["[ERROR] ..."]
+    },
+    "Dependency Resolution": {
+      "d1.log": ["[ERROR] ..."]
+    }
+  }
+}
+```
 ```
 
 Notes about behavior

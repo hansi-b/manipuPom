@@ -61,7 +61,7 @@ def test_evaluate_build_logs_json_data(tmp_path):
         f.write(b"BUILD FAILURE\n")
         f.write(b"Compilation failure: details here\n")
 
-    data = ev.evaluate_build_logs_data(tmp_path)
+    data = ev.evaluate_build_logs_data(tmp_path, blocks_mode='flat')
     assert isinstance(data, dict)
     assert data['total_evaluated'] == 2
     assert data['failure_count'] == 1
@@ -74,7 +74,7 @@ def test_evaluate_build_logs_json_data(tmp_path):
 
 def test_generate_json_report_and_write(tmp_path):
     (tmp_path / 'ok.log').write_text("BUILD SUCCESS\n")
-    data = ev.evaluate_build_logs_data(tmp_path)
+    data = ev.evaluate_build_logs_data(tmp_path, blocks_mode='flat')
     json_report = ev.generate_json_report(data, pretty=True)
     # Validate JSON parsing
     import json as _json
@@ -118,7 +118,7 @@ def test_final_error_block_is_captured(tmp_path):
         f.write(b"[ERROR] Last error 2\n")
         f.write(b"BUILD FAILURE\n")
 
-    data = ev.evaluate_build_logs_data(tmp_path)
+    data = ev.evaluate_build_logs_data(tmp_path, blocks_mode='flat')
     assert 'fail.log' in data['failure_files_by_type'].get('Other Errors', []) or 'fail.log' in sum(data['failure_files_by_type'].values(), [])
     # The error block should be captured for this file
     assert 'fail.log' in data['error_blocks']
@@ -135,7 +135,7 @@ def test_finished_at_timestamps_present_and_text_report(tmp_path):
     # Create two logs with Finished at timestamps and ensure range inclusion
     (tmp_path / 'a.log').write_text("20:00:00,000 [INFO] Finished at: 2025-11-26T18:32:09+01:00\nBUILD SUCCESS\n")
     (tmp_path / 'b.log').write_text("20:00:00,000 [INFO] Finished at: 2025-11-27T18:32:09+01:00\nBUILD FAILURE\n")
-    data = ev.evaluate_build_logs_data(tmp_path)
+    data = ev.evaluate_build_logs_data(tmp_path, blocks_mode='flat')
     assert data['total_evaluated'] == 2
     # first/last timestamp should be set and equal to the min/max of the two
     assert data['first_finished_at'] is not None
@@ -156,7 +156,7 @@ def test_trim_stop_message_removed_from_error_block(tmp_path):
         f.write(b"[ERROR] stacktrace line 1\n")
         f.write(b"BUILD FAILURE\n")
 
-    data = ev.evaluate_build_logs_data(tmp_path)
+    data = ev.evaluate_build_logs_data(tmp_path, blocks_mode='flat')
     # The error block should be trimmed to only include lines before the stop message
     assert 'stopfail.log' in data['error_blocks']
     assert data['error_blocks']['stopfail.log'] == ['[ERROR] Something 1']
@@ -174,7 +174,7 @@ def test_trim_help_message_removed_from_error_block(tmp_path):
         f.write(b"[ERROR] trailing detail\n")
         f.write(b"BUILD FAILURE\n")
 
-    data = ev.evaluate_build_logs_data(tmp_path)
+    data = ev.evaluate_build_logs_data(tmp_path, blocks_mode='flat')
     assert 'helpfail.log' in data['error_blocks']
     assert data['error_blocks']['helpfail.log'] == ['[ERROR] Something else']
     txt = ev.evaluate_build_logs(tmp_path)
@@ -190,7 +190,7 @@ def test_error_block_strips_timestamps(tmp_path):
         f.write(b"20:52:13,600 [ERROR] Timestamped error line 2\n")
         f.write(b"BUILD FAILURE\n")
 
-    data = ev.evaluate_build_logs_data(tmp_path)
+    data = ev.evaluate_build_logs_data(tmp_path, blocks_mode='flat')
     assert 'tsfail.log' in data['error_blocks']
     # Timestamps should be stripped
     assert data['error_blocks']['tsfail.log'] == ['[ERROR] Timestamped error line 1', '[ERROR] Timestamped error line 2']
@@ -205,7 +205,7 @@ def test_error_block_strips_date_and_timestamp(tmp_path):
         f.write(b"2025-11-27T20:52:14,001 [ERROR] DateT stamped error line B\n")
         f.write(b"BUILD FAILURE\n")
 
-    data = ev.evaluate_build_logs_data(tmp_path)
+    data = ev.evaluate_build_logs_data(tmp_path, blocks_mode='flat')
     assert 'datedfail.log' in data['error_blocks']
     assert data['error_blocks']['datedfail.log'] == [
         '[ERROR] Date stamped error line A',

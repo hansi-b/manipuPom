@@ -106,7 +106,7 @@ def _process_log_file(log_file: Path) -> dict:
         'finished_at': finished_at,
     }
 
-def evaluate_build_logs_data(log_dir: Path) -> dict:
+def evaluate_build_logs_data(log_dir: Path, blocks_mode: str = 'grouped') -> dict:
     """Return structured data about build log evaluation.
 
     This returns a dict with keys: 'total_evaluated', 'success_files',
@@ -164,6 +164,16 @@ def evaluate_build_logs_data(log_dir: Path) -> dict:
     total_evaluated = len(success_files) + failure_count
     # Derived counts for JSON consumers
     failure_type_counts = {k: len(v) for k, v in failure_files_by_type.items()}
+    # Group error blocks by failure type for easier consumption
+    error_blocks_by_type: dict[str, dict[str, list[str]]] = {}
+    for err_type, files in failure_files_by_type.items():
+        grouped: dict[str, list[str]] = {}
+        for fn in files:
+            bl = error_blocks.get(fn)
+            if bl:
+                grouped[fn] = bl
+        if grouped:
+            error_blocks_by_type[err_type] = grouped
     # Place counts first to appear at the beginning of JSON output
     # Determine first and last Finished at timestamps if available
     first_finished_at = None
@@ -174,7 +184,7 @@ def evaluate_build_logs_data(log_dir: Path) -> dict:
     elif finished_raw:
         first_finished_at = min(finished_raw)
         last_finished_at = max(finished_raw)
-    return {
+    data = {
         'first_finished_at': first_finished_at,
         'last_finished_at': last_finished_at,
         'total_evaluated': total_evaluated,
@@ -185,11 +195,16 @@ def evaluate_build_logs_data(log_dir: Path) -> dict:
         'success_files': success_files,
         'failure_files_by_type': failure_files_by_type,
         'unreadable_files': unreadable_files,
-        'error_blocks': error_blocks,
     }
+    # Include only the selected error blocks representation
+    if blocks_mode == 'flat':
+        data['error_blocks'] = error_blocks
+    else:
+        data['error_blocks_by_type'] = error_blocks_by_type
+    return data
 
 
-def evaluate_build_logs(log_dir: Path) -> str:
+def evaluate_build_logs(log_dir: Path, blocks_mode: str = 'grouped') -> str:
     """
     Evaluate Maven build logs in the given directory and return a detailed summary report.
 
@@ -197,7 +212,7 @@ def evaluate_build_logs(log_dir: Path) -> str:
       Lines that cannot be decoded due to encoding errors are skipped.
     - Returns a report listing each successful log and grouped failures with file names.
     """
-    data = evaluate_build_logs_data(log_dir)
+    data = evaluate_build_logs_data(log_dir, blocks_mode=blocks_mode)
     success_files = data['success_files']
     failure_files_by_type = data['failure_files_by_type']
     failure_count = data['failure_count']
@@ -235,7 +250,10 @@ def evaluate_build_logs(log_dir: Path) -> str:
             for fn in files:
                 report_lines.append(f"    - {fn}")
                 # Include a final ERROR block for each failure file if available
-                err_block = data.get('error_blocks', {}).get(fn)
+                if blocks_mode == 'flat':
+                    err_block = data.get('error_blocks', {}).get(fn)
+                else:
+                    err_block = data.get('error_blocks_by_type', {}).get(error_type, {}).get(fn)
                 if err_block:
                     report_lines.append("      Final ERROR block:")
                     for bl in err_block:
@@ -248,7 +266,10 @@ def evaluate_build_logs(log_dir: Path) -> str:
         for fn in unreadable_files:
             report_lines.append(f"  - {fn}")
             # Also include final ERROR block if present
-            err_block = data.get('error_blocks', {}).get(fn)
+            if blocks_mode == 'flat':
+                err_block = data.get('error_blocks', {}).get(fn)
+            else:
+                err_block = None
             if err_block:
                 report_lines.append("    Final ERROR block:")
                 for bl in err_block:
@@ -284,6 +305,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--outfile", "-o", help="Write the generated report to this file (optional)")
     p.add_argument("--format", "-f", choices=["text", "json"], default="text",
                    help="Output format for the report (text or json); default: text")
+    p.add_argument("--error-blocks", choices=["grouped", "flat"], default="grouped",
+                   help="Error blocks representation: grouped by failure type (default) or flat per file.")
     args = p.parse_args(argv)
 
     # Helper: detect an explicit --format or -f value in argv and return it
@@ -322,10 +345,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if getattr(args, 'format', 'text') == 'json':
-        data = evaluate_build_logs_data(log_dir)
+        data = evaluate_build_logs_data(log_dir, blocks_mode=args.error_blocks)
         report = generate_json_report(data, pretty=True)
     else:
-        report = evaluate_build_logs(log_dir)
+        report = evaluate_build_logs(log_dir, blocks_mode=args.error_blocks)
 
     if getattr(args, 'outfile', None):
         try:
