@@ -182,3 +182,49 @@ def test_extract_dependencies_filtered_root():
         # Should return None for filtered root
         assert filtered_result[0] is None
         assert len(filtered_result[1]) == 0
+
+def test_get_module_roots():
+    """Test getting module roots from a dependency graph"""
+    # Build a simple test graph
+    G = dt.build_dependency_graph(TEST_DATA)
+    
+    # Get module roots
+    roots = dt.get_module_roots(G)
+    
+    # Verify that roots is a list
+    assert isinstance(roots, list)
+    
+    # Verify that roots are sorted
+    assert roots == sorted(roots)
+    
+    # Verify that all items in roots are nodes in the graph
+    for root in roots:
+        assert root in G.nodes
+    
+    # Verify that all roots have no incoming edges
+    for root in roots:
+        assert G.in_degree(root) == 0
+    
+    # Verify that there is at least one root
+    assert len(roots) > 0
+
+def test_get_module_roots_empty_graph():
+    """Test getting module roots from an empty graph"""
+    G = dt.build_dependency_graph(Path(__file__).resolve().parent / 'nonexistent')
+    roots = dt.get_module_roots(G)
+    
+    # Empty graph should have no roots
+    assert roots == []
+
+def test_get_module_roots_with_filtering():
+    """Test getting module roots with group filtering applied"""
+    # Build graph with group IDs included
+    G = dt.build_dependency_graph(TEST_DATA, include_group_id=True)
+    roots = dt.get_module_roots(G)
+    
+    # Verify roots are properly identified even with groupIds
+    for root in roots:
+        assert G.in_degree(root) == 0
+    
+    # Should still have at least one root
+    assert len(roots) > 0

@@ -129,12 +129,23 @@ def generate_json(G: nx.DiGraph) -> str:
     data = nx.readwrite.json_graph.node_link_data(G, edges="edges")
     return json.dumps(data, indent=2)
 
+def get_module_roots(G: nx.DiGraph) -> list[str]:
+    """Get all module roots (nodes with no incoming edges - no dependencies).
+    
+    Returns:
+        A sorted list of module names that have no dependencies in the graph.
+    """
+    roots = [n for n in G.nodes if G.in_degree(n) == 0]
+    return sorted(roots)
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="Generate dependency relations graph from all pom.xml files in a directory.")
     parser.add_argument("directory", help="Root directory to search for pom.xml files")
     parser.add_argument("--format", "-m", choices=["plantuml", "json"], default="plantuml",
                         help="Output format for the dependency graph (default: plantuml)")
+    parser.add_argument("--roots", action="store_true",
+                        help="Only output the module roots (modules with no dependencies), one per line")
     parser.add_argument("--outfile", "-f", help="If provided, write generated output to this file.")
     parser.add_argument("--add-group-id", action="store_true",
                         help="Include groupId in artifact names")
@@ -155,17 +166,25 @@ def main():
                              excluded_groups=excluded_groups)
     
     print(f"Built dependency graph with {G.number_of_nodes()} nodes and {G.number_of_edges()} edges.")
-    graph_output = ""
-    if args.format == "plantuml":
-        graph_output = generate_plant_uml(G)
-    elif args.format == "json":
-        graph_output = generate_json(G)
+    
+    if args.roots:
+        # Output only the module roots
+        roots = get_module_roots(G)
+        output = "\n".join(roots)
+    else:
+        graph_output = ""
+        if args.format == "plantuml":
+            graph_output = generate_plant_uml(G)
+        elif args.format == "json":
+            graph_output = generate_json(G)
+        output = graph_output
+    
     if args.outfile:
         with open(args.outfile, "w") as f:
-            f.write(graph_output)
+            f.write(output)
         print(f"Wrote output to {args.outfile}")
     else:
-        print(graph_output)
+        print(output)
 
 if __name__ == "__main__":
     main()
