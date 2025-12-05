@@ -211,6 +211,69 @@ def test_get_transitive_dependents():
     expected = nx.ancestors(G, module)
     assert deps == expected
 
+def _flatten_tree(tree: dict) -> set:
+    """Helper to collect all nodes from nested tree dict (excluding root key)."""
+    nodes = set()
+    if not tree:
+        return nodes
+    def rec(d):
+        for k, v in d.items():
+            nodes.add(k)
+            if isinstance(v, dict):
+                rec(v)
+    # top-level contains the root
+    for root, sub in tree.items():
+        rec(sub)
+    return nodes
+
+def _build_parent_map(tree: dict) -> dict:
+    """Return mapping child->parent from nested tree structure."""
+    parent = {}
+    def rec(node, subtree):
+        for child, sub in subtree.items():
+            parent[child] = node
+            rec(child, sub)
+    for root, sub in tree.items():
+        rec(root, sub)
+    return parent
+
+def test_transitive_dependencies_tree_structure():
+    G = dt.build_dependency_graph(TEST_DATA)
+    module = next((n for n in G.nodes if G.out_degree(n) > 0), None)
+    assert module is not None
+
+    tree = dt.get_transitive_dependencies_tree(G, module)
+    assert isinstance(tree, dict)
+    # flattened nodes should match descendants
+    flat = _flatten_tree(tree)
+    assert flat == nx.descendants(G, module)
+
+    # verify parent-child in tree corresponds to shortest path predecessor
+    parent_map = _build_parent_map(tree)
+    paths = nx.single_source_shortest_path(G, module)
+    for node in flat:
+        path = paths[node]
+        expected_parent = path[-2]
+        assert parent_map[node] == expected_parent
+
+def test_transitive_dependents_tree_structure():
+    G = dt.build_dependency_graph(TEST_DATA)
+    module = next((n for n in G.nodes if G.in_degree(n) > 0), None)
+    assert module is not None
+
+    tree = dt.get_transitive_dependents_tree(G, module)
+    assert isinstance(tree, dict)
+    flat = _flatten_tree(tree)
+    assert flat == nx.ancestors(G, module)
+
+    parent_map = _build_parent_map(tree)
+    RG = G.reverse(copy=True)
+    paths = nx.single_source_shortest_path(RG, module)
+    for node in flat:
+        path = paths[node]
+        expected_parent = path[-2]
+        assert parent_map[node] == expected_parent
+
 def test_get_transitive_dependents_missing():
     """Missing module should return empty list for dependents."""
     G = dt.build_dependency_graph(TEST_DATA)

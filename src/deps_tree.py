@@ -165,6 +165,28 @@ def get_transitive_dependencies(G: nx.DiGraph, module: str) -> list[str]:
     descendants = nx.descendants(G, module)
     return sorted(list(descendants))
 
+def get_transitive_dependencies_tree(G: nx.DiGraph, module: str) -> dict:
+    """Return a nested dict representing the shortest-path dependency tree rooted at module.
+
+    The structure is { module: { child1: {...}, child2: {...}, ... } }.
+    """
+    if module not in G.nodes:
+        return {}
+
+    paths = nx.single_source_shortest_path(G, module)
+    # build children mapping: parent -> set(children)
+    children = {n: set() for n in paths}
+    for node, path in paths.items():
+        if node == module:
+            continue
+        parent = path[-2]
+        children[parent].add(node)
+
+    def build(node):
+        return {child: build(child) for child in sorted(children.get(node, []))}
+
+    return {module: build(module)}
+
 def get_transitive_dependents(G: nx.DiGraph, module: str) -> list[str]:
     """Get all transitive dependents of a given module.
     
@@ -182,6 +204,30 @@ def get_transitive_dependents(G: nx.DiGraph, module: str) -> list[str]:
     # (following the direction of edges backwards, i.e., dependents)
     ancestors = nx.ancestors(G, module)
     return sorted(list(ancestors))
+
+def get_transitive_dependents_tree(G: nx.DiGraph, module: str) -> dict:
+    """Return a nested dict representing the shortest-path dependents tree rooted at module.
+
+    Uses the graph reversed so that dependents are reachable from the module.
+    The structure is { module: { dependent1: {...}, dependent2: {...}, ... } }.
+    """
+    if module not in G.nodes:
+        return {}
+
+    RG = G.reverse(copy=True)
+    paths = nx.single_source_shortest_path(RG, module)
+
+    children = {n: set() for n in paths}
+    for node, path in paths.items():
+        if node == module:
+            continue
+        parent = path[-2]
+        children[parent].add(node)
+
+    def build(node):
+        return {child: build(child) for child in sorted(children.get(node, []))}
+
+    return {module: build(module)}
 
 def main():
     import argparse
@@ -227,19 +273,21 @@ def main():
         leaves = get_module_leaves(G)
         output = "\n".join(leaves)
     elif args.dependencies:
-        # Output all transitive dependencies of the given module
-        deps = get_transitive_dependencies(G, args.dependencies)
-        if not deps and args.dependencies not in G.nodes:
+        # Output transitive dependencies as a JSON tree rooted at the given module
+        if args.dependencies not in G.nodes:
             print(f"Error: Module '{args.dependencies}' not found in the graph.", file=sys.stderr)
             sys.exit(1)
-        output = "\n".join(deps)
+        import json
+        tree = get_transitive_dependencies_tree(G, args.dependencies)
+        output = json.dumps(tree, indent=2)
     elif args.dependents:
-        # Output all transitive dependents of the given module
-        dependents = get_transitive_dependents(G, args.dependents)
-        if not dependents and args.dependents not in G.nodes:
+        # Output transitive dependents as a JSON tree rooted at the given module
+        if args.dependents not in G.nodes:
             print(f"Error: Module '{args.dependents}' not found in the graph.", file=sys.stderr)
             sys.exit(1)
-        output = "\n".join(dependents)
+        import json
+        tree = get_transitive_dependents_tree(G, args.dependents)
+        output = json.dumps(tree, indent=2)
     else:
         graph_output = ""
         if args.format == "plantuml":
