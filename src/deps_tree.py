@@ -138,6 +138,15 @@ def get_module_roots(G: nx.DiGraph) -> list[str]:
     roots = [n for n in G.nodes if G.in_degree(n) == 0]
     return sorted(roots)
 
+def get_module_leaves(G: nx.DiGraph) -> list[str]:
+    """Get all module leaves (nodes with no outgoing edges - no dependents).
+    
+    Returns:
+        A sorted list of module names that have no dependents in the graph.
+    """
+    leaves = [n for n in G.nodes if G.out_degree(n) == 0]
+    return sorted(leaves)
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="Generate dependency relations graph from all pom.xml files in a directory.")
@@ -146,6 +155,8 @@ def main():
                         help="Output format for the dependency graph (default: plantuml)")
     parser.add_argument("--roots", action="store_true",
                         help="Only output the module roots (modules with no dependencies), one per line")
+    parser.add_argument("--leaves", action="store_true",
+                        help="Only output the module leaves (modules with no dependents), one per line")
     parser.add_argument("--outfile", "-f", help="If provided, write generated output to this file.")
     parser.add_argument("--add-group-id", action="store_true",
                         help="Include groupId in artifact names")
@@ -171,6 +182,10 @@ def main():
         # Output only the module roots
         roots = get_module_roots(G)
         output = "\n".join(roots)
+    elif args.leaves:
+        # Output only the module leaves
+        leaves = get_module_leaves(G)
+        output = "\n".join(leaves)
     else:
         graph_output = ""
         if args.format == "plantuml":

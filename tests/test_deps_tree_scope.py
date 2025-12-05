@@ -228,3 +228,49 @@ def test_get_module_roots_with_filtering():
     
     # Should still have at least one root
     assert len(roots) > 0
+
+def test_get_module_leaves():
+    """Test getting module leaves from a dependency graph"""
+    # Build a simple test graph
+    G = dt.build_dependency_graph(TEST_DATA)
+    
+    # Get module leaves
+    leaves = dt.get_module_leaves(G)
+    
+    # Verify that leaves is a list
+    assert isinstance(leaves, list)
+    
+    # Verify that leaves are sorted
+    assert leaves == sorted(leaves)
+    
+    # Verify that all items in leaves are nodes in the graph
+    for leaf in leaves:
+        assert leaf in G.nodes
+    
+    # Verify that all leaves have no outgoing edges
+    for leaf in leaves:
+        assert G.out_degree(leaf) == 0
+    
+    # Verify that there is at least one leaf
+    assert len(leaves) > 0
+
+def test_get_module_leaves_empty_graph():
+    """Test getting module leaves from an empty graph"""
+    G = dt.build_dependency_graph(Path(__file__).resolve().parent / 'nonexistent')
+    leaves = dt.get_module_leaves(G)
+    
+    # Empty graph should have no leaves
+    assert leaves == []
+
+def test_get_module_leaves_with_filtering():
+    """Test getting module leaves with group filtering applied"""
+    # Build graph with group IDs included
+    G = dt.build_dependency_graph(TEST_DATA, include_group_id=True)
+    leaves = dt.get_module_leaves(G)
+    
+    # Verify leaves are properly identified even with groupIds
+    for leaf in leaves:
+        assert G.out_degree(leaf) == 0
+    
+    # Should still have at least one leaf
+    assert len(leaves) > 0
