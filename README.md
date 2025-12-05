@@ -148,6 +148,10 @@ python3 src/deps_tree.py path/to/maven/project --dependencies example.org:test-m
 
 # Show transitive dependents (modules that (transitively) depend on MODULE)
 python3 src/deps_tree.py path/to/maven/project --dependents org.seleniumhq.selenium:selenium-java
+
+# Use flat output (newline list) instead of JSON tree
+python3 src/deps_tree.py path/to/maven/project --dependencies example.org:test-mod-deps --flat
+python3 src/deps_tree.py path/to/maven/project --dependents org.seleniumhq.selenium:selenium-java --flat
 ```
 
 To update parent versions across a directory of POMs:

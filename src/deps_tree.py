@@ -243,6 +243,8 @@ def main():
                         help="Output all transitive dependencies of the given module, one per line")
     parser.add_argument("--dependents", metavar="MODULE",
                         help="Output all transitive dependents of the given module, one per line")
+    parser.add_argument("--flat", action="store_true",
+                        help="When used with --dependencies or --dependents, output a flat newline-separated list instead of a JSON tree")
     parser.add_argument("--outfile", "-f", help="If provided, write generated output to this file.")
     parser.add_argument("--add-group-id", action="store_true",
                         help="Include groupId in artifact names")
@@ -273,21 +275,29 @@ def main():
         leaves = get_module_leaves(G)
         output = "\n".join(leaves)
     elif args.dependencies:
-        # Output transitive dependencies as a JSON tree rooted at the given module
+        # Output transitive dependencies as either JSON tree or flat list
         if args.dependencies not in G.nodes:
             print(f"Error: Module '{args.dependencies}' not found in the graph.", file=sys.stderr)
             sys.exit(1)
-        import json
-        tree = get_transitive_dependencies_tree(G, args.dependencies)
-        output = json.dumps(tree, indent=2)
+        if args.flat:
+            deps = get_transitive_dependencies(G, args.dependencies)
+            output = "\n".join(deps)
+        else:
+            import json
+            tree = get_transitive_dependencies_tree(G, args.dependencies)
+            output = json.dumps(tree, indent=2)
     elif args.dependents:
-        # Output transitive dependents as a JSON tree rooted at the given module
+        # Output transitive dependents as either JSON tree or flat list
         if args.dependents not in G.nodes:
             print(f"Error: Module '{args.dependents}' not found in the graph.", file=sys.stderr)
             sys.exit(1)
-        import json
-        tree = get_transitive_dependents_tree(G, args.dependents)
-        output = json.dumps(tree, indent=2)
+        if args.flat:
+            dependents = get_transitive_dependents(G, args.dependents)
+            output = "\n".join(dependents)
+        else:
+            import json
+            tree = get_transitive_dependents_tree(G, args.dependents)
+            output = json.dumps(tree, indent=2)
     else:
         graph_output = ""
         if args.format == "plantuml":
