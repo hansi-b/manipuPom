@@ -147,6 +147,42 @@ def get_module_leaves(G: nx.DiGraph) -> list[str]:
     leaves = [n for n in G.nodes if G.out_degree(n) == 0]
     return sorted(leaves)
 
+def get_transitive_dependencies(G: nx.DiGraph, module: str) -> list[str]:
+    """Get all transitive dependencies of a given module.
+    
+    Args:
+        G: The dependency graph
+        module: The module name to find dependencies for
+    
+    Returns:
+        A sorted list of all modules that the given module depends on (transitively).
+    """
+    if module not in G.nodes:
+        return []
+    
+    # Use NetworkX descendants to find all nodes reachable from the module
+    # (following the direction of edges, i.e., dependencies)
+    descendants = nx.descendants(G, module)
+    return sorted(list(descendants))
+
+def get_transitive_dependents(G: nx.DiGraph, module: str) -> list[str]:
+    """Get all transitive dependents of a given module.
+    
+    Args:
+        G: The dependency graph
+        module: The module name to find dependents for
+    
+    Returns:
+        A sorted list of all modules that depend on the given module (transitively).
+    """
+    if module not in G.nodes:
+        return []
+    
+    # Use NetworkX ancestors to find all nodes that can reach the module
+    # (following the direction of edges backwards, i.e., dependents)
+    ancestors = nx.ancestors(G, module)
+    return sorted(list(ancestors))
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="Generate dependency relations graph from all pom.xml files in a directory.")
@@ -157,6 +193,10 @@ def main():
                         help="Only output the module roots (modules with no dependencies), one per line")
     parser.add_argument("--leaves", action="store_true",
                         help="Only output the module leaves (modules with no dependents), one per line")
+    parser.add_argument("--dependencies", metavar="MODULE",
+                        help="Output all transitive dependencies of the given module, one per line")
+    parser.add_argument("--dependents", metavar="MODULE",
+                        help="Output all transitive dependents of the given module, one per line")
     parser.add_argument("--outfile", "-f", help="If provided, write generated output to this file.")
     parser.add_argument("--add-group-id", action="store_true",
                         help="Include groupId in artifact names")
@@ -186,6 +226,20 @@ def main():
         # Output only the module leaves
         leaves = get_module_leaves(G)
         output = "\n".join(leaves)
+    elif args.dependencies:
+        # Output all transitive dependencies of the given module
+        deps = get_transitive_dependencies(G, args.dependencies)
+        if not deps and args.dependencies not in G.nodes:
+            print(f"Error: Module '{args.dependencies}' not found in the graph.", file=sys.stderr)
+            sys.exit(1)
+        output = "\n".join(deps)
+    elif args.dependents:
+        # Output all transitive dependents of the given module
+        dependents = get_transitive_dependents(G, args.dependents)
+        if not dependents and args.dependents not in G.nodes:
+            print(f"Error: Module '{args.dependents}' not found in the graph.", file=sys.stderr)
+            sys.exit(1)
+        output = "\n".join(dependents)
     else:
         graph_output = ""
         if args.format == "plantuml":

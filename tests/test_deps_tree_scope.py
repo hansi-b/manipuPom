@@ -10,6 +10,7 @@ SRC = ROOT / 'src'
 sys.path.insert(0, str(SRC))
 
 import deps_tree as dt
+import networkx as nx
 
 TEST_DATA = Path(__file__).resolve().parent / 'data'
 
@@ -182,6 +183,38 @@ def test_extract_dependencies_filtered_root():
         # Should return None for filtered root
         assert filtered_result[0] is None
         assert len(filtered_result[1]) == 0
+
+def test_get_transitive_dependencies():
+    """Test transitive dependencies resolution."""
+    G = dt.build_dependency_graph(TEST_DATA)
+    # pick a module that has at least one outgoing edge
+    module = next((n for n in G.nodes if G.out_degree(n) > 0), None)
+    assert module is not None
+
+    deps = set(dt.get_transitive_dependencies(G, module))
+    expected = nx.descendants(G, module)
+    assert deps == expected
+
+def test_get_transitive_dependencies_missing():
+    """Missing module should return empty list."""
+    G = dt.build_dependency_graph(TEST_DATA)
+    assert dt.get_transitive_dependencies(G, 'nonexistent:module') == []
+
+def test_get_transitive_dependents():
+    """Test transitive dependents resolution."""
+    G = dt.build_dependency_graph(TEST_DATA)
+    # pick a module that has at least one incoming edge
+    module = next((n for n in G.nodes if G.in_degree(n) > 0), None)
+    assert module is not None
+
+    deps = set(dt.get_transitive_dependents(G, module))
+    expected = nx.ancestors(G, module)
+    assert deps == expected
+
+def test_get_transitive_dependents_missing():
+    """Missing module should return empty list for dependents."""
+    G = dt.build_dependency_graph(TEST_DATA)
+    assert dt.get_transitive_dependents(G, 'nonexistent:module') == []
 
 def test_get_module_roots():
     """Test getting module roots from a dependency graph"""

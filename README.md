@@ -44,6 +44,9 @@ This repository contains:
 - Filter dependencies by including or excluding specific groupIds.
 - Flexible node naming with optional groupId inclusion.
 - Support writing output to files or standard output.
+ - CLI options to list module roots/leaves and show transitive dependency/dependent trees.
+   - `--roots` / `--leaves`: print modules with no incoming / no outgoing edges.
+   - `--dependencies MODULE` / `--dependents MODULE`: print transitive dependencies or dependents for `MODULE`.
 
 ### mod_parent.py
 
@@ -133,6 +136,18 @@ python3 src/deps_tree.py path/to/maven/project --exclude-groups org.apache.loggi
 
 # Combine options
 python3 src/deps_tree.py path/to/maven/project --add-group-id --include-groups org.springframework --format json
+
+# Output only module roots (modules with no incoming edges)
+python3 src/deps_tree.py path/to/maven/project --roots
+
+# Output only module leaves (modules with no outgoing edges)
+python3 src/deps_tree.py path/to/maven/project --leaves
+
+# Show transitive dependencies of a module (use groupId:artifactId if --add-group-id was used)
+python3 src/deps_tree.py path/to/maven/project --dependencies example.org:test-mod-deps
+
+# Show transitive dependents (modules that (transitively) depend on MODULE)
+python3 src/deps_tree.py path/to/maven/project --dependents org.seleniumhq.selenium:selenium-java
 ```
 
 To update parent versions across a directory of POMs:
