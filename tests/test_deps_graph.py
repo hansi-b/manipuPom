@@ -212,7 +212,7 @@ def test_get_transitive_dependents():
     assert deps == expected
 
 def _flatten_tree(tree: dict) -> set:
-    """Helper to collect all nodes from nested tree dict (excluding root key)."""
+    """Helper to collect all nodes from nested tree dict."""
     nodes = set()
     if not tree:
         return nodes
@@ -221,20 +221,35 @@ def _flatten_tree(tree: dict) -> set:
             nodes.add(k)
             if isinstance(v, dict):
                 rec(v)
-    # top-level contains the root
-    for root, sub in tree.items():
-        rec(sub)
+    rec(tree)
     return nodes
 
-def _build_parent_map(tree: dict) -> dict:
-    """Return mapping child->parent from nested tree structure."""
+def _build_parent_map(tree: dict, root: str = None) -> dict:
+    """Return mapping child->parent from nested tree structure.
+    
+    Args:
+        tree: The tree dict
+        root: The root node (parent of top-level keys). If None, top-level keys have no parent in the map.
+    """
     parent = {}
     def rec(node, subtree):
         for child, sub in subtree.items():
             parent[child] = node
-            rec(child, sub)
-    for root, sub in tree.items():
-        rec(root, sub)
+            if isinstance(sub, dict):
+                rec(child, sub)
+    
+    # If root is provided, top-level keys are children of root
+    # Otherwise, they're orphans (parent is not tracked)
+    if root is not None:
+        for top_level_child, subtree in tree.items():
+            parent[top_level_child] = root
+            if isinstance(subtree, dict):
+                rec(top_level_child, subtree)
+    else:
+        for top_level_child, subtree in tree.items():
+            if isinstance(subtree, dict):
+                rec(top_level_child, subtree)
+    
     return parent
 
 def test_transitive_dependencies_tree_structure():
@@ -249,7 +264,7 @@ def test_transitive_dependencies_tree_structure():
     assert flat == nx.descendants(G, module)
 
     # verify parent-child in tree corresponds to shortest path predecessor
-    parent_map = _build_parent_map(tree)
+    parent_map = _build_parent_map(tree, module)
     paths = nx.single_source_shortest_path(G, module)
     for node in flat:
         path = paths[node]
@@ -266,7 +281,7 @@ def test_transitive_dependents_tree_structure():
     flat = _flatten_tree(tree)
     assert flat == nx.ancestors(G, module)
 
-    parent_map = _build_parent_map(tree)
+    parent_map = _build_parent_map(tree, module)
     RG = G.reverse(copy=True)
     paths = nx.single_source_shortest_path(RG, module)
     for node in flat:

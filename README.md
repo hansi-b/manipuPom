@@ -154,6 +154,26 @@ python3 src/deps_graph.py path/to/maven/project --dependencies example.org:test-
 python3 src/deps_graph.py path/to/maven/project --dependents org.seleniumhq.selenium:selenium-java --flat
 ```
 
+#### Dependency Tree Output Format
+
+When using `--dependencies` or `--dependents` without the `--flat` flag, the output is a JSON tree structure showing transitive relationships. The tree contains only the direct and transitive dependencies/dependents of the specified module (the argument module itself is not included in the tree).
+
+For example, given a module `example.org:test-mod-deps` with transitive dependencies:
+- `example.org:test-mod-deps` → `example.org:dep1` → `example.org:dep1-1`
+- `example.org:test-mod-deps` → `example.org:dep2`
+
+The output would be:
+```json
+{
+  "example.org:dep1": {
+    "example.org:dep1-1": {}
+  },
+  "example.org:dep2": {}
+}
+```
+
+Note that the argument module (`example.org:test-mod-deps`) does not appear in the tree.
+
 To update parent versions across a directory of POMs:
 
 ```bash

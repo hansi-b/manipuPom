@@ -169,7 +169,7 @@ def get_transitive_dependents(G: nx.DiGraph, module: str) -> list[str]:
 def get_transitive_dependencies_tree(G: nx.DiGraph, module: str) -> dict:
     """Return a nested dict representing the shortest-path dependency tree rooted at module.
 
-    The structure is { module: { child1: {...}, child2: {...}, ... } }.
+    The structure is { child1: {...}, child2: {...}, ... } (does not include the module argument itself).
     """
     if module not in G.nodes:
         return {}
@@ -186,13 +186,13 @@ def get_transitive_dependencies_tree(G: nx.DiGraph, module: str) -> dict:
     def build(node):
         return {child: build(child) for child in sorted(children.get(node, []))}
 
-    return {module: build(module)}
+    return build(module)
 
 def get_transitive_dependents_tree(G: nx.DiGraph, module: str) -> dict:
     """Return a nested dict representing the shortest-path dependents tree rooted at module.
 
     Uses the graph reversed so that dependents are reachable from the module.
-    The structure is { module: { dependent1: {...}, dependent2: {...}, ... } }.
+    The structure is { dependent1: {...}, dependent2: {...}, ... } (does not include the module argument itself).
     """
     return get_transitive_dependencies_tree(G.reverse(copy=True), module)
 
