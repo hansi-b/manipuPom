@@ -160,6 +160,21 @@ def get_transitive_dependencies(G: nx.DiGraph, module: str) -> list[str]:
     
     return sorted(nx.descendants(G, module))
 
+def get_transitive_dependents(G: nx.DiGraph, module: str) -> list[str]:
+    """Get all transitive dependents of a given module.
+    
+    Args:
+        G: The dependency graph
+        module: The module name to find dependents for
+    
+    Returns:
+        A sorted list of all modules that depend on the given module (transitively).
+    """
+    if module not in G.nodes:
+        return []
+    
+    return sorted(nx.ancestors(G, module))
+
 def get_transitive_dependencies_tree(G: nx.DiGraph, module: str) -> dict:
     """Return a nested dict representing the shortest-path dependency tree rooted at module.
 
@@ -182,44 +197,13 @@ def get_transitive_dependencies_tree(G: nx.DiGraph, module: str) -> dict:
 
     return {module: build(module)}
 
-def get_transitive_dependents(G: nx.DiGraph, module: str) -> list[str]:
-    """Get all transitive dependents of a given module.
-    
-    Args:
-        G: The dependency graph
-        module: The module name to find dependents for
-    
-    Returns:
-        A sorted list of all modules that depend on the given module (transitively).
-    """
-    if module not in G.nodes:
-        return []
-    
-    return sorted(nx.ancestors(G, module))
-
 def get_transitive_dependents_tree(G: nx.DiGraph, module: str) -> dict:
     """Return a nested dict representing the shortest-path dependents tree rooted at module.
 
     Uses the graph reversed so that dependents are reachable from the module.
     The structure is { module: { dependent1: {...}, dependent2: {...}, ... } }.
     """
-    if module not in G.nodes:
-        return {}
-
-    RG = G.reverse(copy=True)
-    paths = nx.single_source_shortest_path(RG, module)
-
-    children = {n: set() for n in paths}
-    for node, path in paths.items():
-        if node == module:
-            continue
-        parent = path[-2]
-        children[parent].add(node)
-
-    def build(node):
-        return {child: build(child) for child in sorted(children.get(node, []))}
-
-    return {module: build(module)}
+    return get_transitive_dependencies_tree(G.reverse(copy=True), module)
 
 def main():
     import argparse
