@@ -166,35 +166,61 @@ def get_transitive_dependents(G: nx.DiGraph, module: str) -> list[str]:
     
     return sorted(nx.ancestors(G, module))
 
-def get_transitive_dependencies_tree(G: nx.DiGraph, module: str) -> dict:
-    """Return a nested dict representing the shortest-path dependency tree rooted at module.
+def get_transitive_dependencies_tree(G: nx.DiGraph, module: str, all_paths: bool = False) -> dict:
+    """Return a nested dict representing the dependency tree rooted at module.
 
-    The structure is { child1: {...}, child2: {...}, ... } (does not include the module argument itself).
+    Args:
+        G: The dependency graph
+        module: The root module
+        all_paths: If True, show all paths to each module. If False (default), show only shortest paths.
+
+    Returns:
+        A nested dict with structure { child1: {...}, child2: {...}, ... } 
+        (does not include the module argument itself).
     """
     if module not in G.nodes:
         return {}
 
-    paths = nx.single_source_shortest_path(G, module)
-    # build children mapping: parent -> set(children)
-    children = {n: set() for n in paths}
-    for node, path in paths.items():
-        if node == module:
-            continue
-        parent = path[-2]
-        children[parent].add(node)
+    if all_paths:
+        # Build a tree that includes all paths to each module
+        def build_all_paths(node, visited=None):
+            if visited is None:
+                visited = set()
+            result = {}
+            for child in sorted(G.successors(node)):
+                if child not in visited:
+                    new_visited = visited | {child}
+                    result[child] = build_all_paths(child, new_visited)
+            return result
+        return build_all_paths(module)
+    else:
+        # Original behavior: shortest path only
+        paths = nx.single_source_shortest_path(G, module)
+        # build children mapping: parent -> set(children)
+        children = {n: set() for n in paths}
+        for node, path in paths.items():
+            if node == module:
+                continue
+            parent = path[-2]
+            children[parent].add(node)
 
-    def build(node):
-        return {child: build(child) for child in sorted(children.get(node, []))}
+        def build(node):
+            return {child: build(child) for child in sorted(children.get(node, []))}
 
-    return build(module)
+        return build(module)
 
-def get_transitive_dependents_tree(G: nx.DiGraph, module: str) -> dict:
-    """Return a nested dict representing the shortest-path dependents tree rooted at module.
+def get_transitive_dependents_tree(G: nx.DiGraph, module: str, all_paths: bool = False) -> dict:
+    """Return a nested dict representing the dependents tree rooted at module.
+
+    Args:
+        G: The dependency graph
+        module: The root module
+        all_paths: If True, show all paths to each module. If False (default), show only shortest paths.
 
     Uses the graph reversed so that dependents are reachable from the module.
     The structure is { dependent1: {...}, dependent2: {...}, ... } (does not include the module argument itself).
     """
-    return get_transitive_dependencies_tree(G.reverse(copy=True), module)
+    return get_transitive_dependencies_tree(G.reverse(copy=True), module, all_paths=all_paths)
 
 def main():
     import argparse
@@ -212,6 +238,8 @@ def main():
                         help="Output all transitive dependents of the given module, one per line")
     parser.add_argument("--flat", action="store_true",
                         help="When used with --dependencies or --dependents, output a flat newline-separated list instead of a JSON tree")
+    parser.add_argument("--all-paths", action="store_true",
+                        help="When used with --dependencies or --dependents (without --flat), show all paths to each module in the tree, not just the shortest path")
     parser.add_argument("--outfile", "-f", help="If provided, write generated output to this file.")
     parser.add_argument("--add-group-id", action="store_true",
                         help="Include groupId in artifact names")
@@ -251,7 +279,7 @@ def main():
             output = "\n".join(deps)
         else:
             import json
-            tree = get_transitive_dependencies_tree(G, args.dependencies)
+            tree = get_transitive_dependencies_tree(G, args.dependencies, all_paths=args.all_paths)
             output = json.dumps(tree, indent=2)
     elif args.dependents:
         # Output transitive dependents as either JSON tree or flat list
@@ -263,7 +291,7 @@ def main():
             output = "\n".join(dependents)
         else:
             import json
-            tree = get_transitive_dependents_tree(G, args.dependents)
+            tree = get_transitive_dependents_tree(G, args.dependents, all_paths=args.all_paths)
             output = json.dumps(tree, indent=2)
     else:
         graph_output = ""

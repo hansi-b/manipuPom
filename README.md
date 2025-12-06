@@ -152,11 +152,15 @@ python3 src/deps_graph.py path/to/maven/project --dependents org.seleniumhq.sele
 # Use flat output (newline list) instead of JSON tree
 python3 src/deps_graph.py path/to/maven/project --dependencies example.org:test-mod-deps --flat
 python3 src/deps_graph.py path/to/maven/project --dependents org.seleniumhq.selenium:selenium-java --flat
+
+# Show all paths to each module, instead of just the first shortest path
+python3 src/deps_graph.py path/to/maven/project --dependencies example.org:test-mod-deps --all-paths
+python3 src/deps_graph.py path/to/maven/project --dependents org.seleniumhq.selenium:selenium-java --all-paths
 ```
 
 #### Dependency Tree Output Format
 
-When using `--dependencies` or `--dependents` without the `--flat` flag, the output is a JSON tree structure showing transitive relationships. The tree contains only the direct and transitive dependencies/dependents of the specified module (the argument module itself is not included in the tree).
+When using `--dependencies` or `--dependents` without the `--flat` flag, the output is a JSON tree structure showing transitive relationships. By default, only the first shortest path to each module is included in the tree. The tree contains only the direct and transitive dependencies/dependents of the specified module (the argument module itself is not included in the tree).
 
 For example, given a module `example.org:test-mod-deps` with transitive dependencies:
 - `example.org:test-mod-deps` → `example.org:dep1` → `example.org:dep1-1`
@@ -173,6 +177,32 @@ The output would be:
 ```
 
 Note that the argument module (`example.org:test-mod-deps`) does not appear in the tree.
+
+##### Using `--all-paths`
+
+By default, the tree shows only the shortest path to each module. To include all paths to each module (useful for understanding all ways a dependency can be reached), use the `--all-paths` flag:
+
+```bash
+python3 src/deps_graph.py path/to/maven/project --dependencies example.org:test-mod-deps --all-paths
+```
+
+For example, if a module can be reached via multiple paths:
+- `example.org:test-mod-deps` → `example.org:dep1` → `example.org:dep1-1`
+- `example.org:test-mod-deps` → `example.org:dep2` → `example.org:dep1-1`
+
+The output with `--all-paths` would be:
+```json
+{
+  "example.org:dep1": {
+    "example.org:dep1-1": {}
+  },
+  "example.org:dep2": {
+    "example.org:dep1-1": {}
+  }
+}
+```
+
+Note that `example.org:dep1-1` now appears twice in the tree (under both `dep1` and `dep2`), showing all ways to reach that module.
 
 To update parent versions across a directory of POMs:
 
