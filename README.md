@@ -14,7 +14,7 @@ This repository contains:
   dependencies by `artifactId`, change the scope of dependencies, and optionally write changes back to the
   POM file. When writing, the script will automatically create a
   `.bak` backup of the original file.
-- `src/deps_tree.py` — Script to generate dependency graphs from Maven projects. It can analyze multiple
+- `src/deps_graph.py` — Script to generate dependency graphs from Maven projects. It can analyze multiple
   POM files in a directory structure and output the dependency relationships in either PlantUML or JSON format.
 - `src/mod_parent.py` — Script to update `<parent><version>` in multiple POM files. Works recursively and can
   update many POMs in place or perform a dry-run.
@@ -35,7 +35,7 @@ This repository contains:
 - Optionally overwrite the original POM; a `.bak` copy is always
   created before overwriting.
 
-### deps_tree.py
+### deps_graph.py
 
 - Generate dependency graphs from all POM files in a directory structure.
 - Output dependency relationships in either PlantUML or JSON format.
@@ -117,41 +117,41 @@ To generate a dependency graph:
 
 ```bash
 # Generate PlantUML output (default)
-python3 src/deps_tree.py path/to/maven/project
+python3 src/deps_graph.py path/to/maven/project
 
 # Generate JSON output
-python3 src/deps_tree.py path/to/maven/project --format json
+python3 src/deps_graph.py path/to/maven/project --format json
 
 # Write output to a file
-python3 src/deps_tree.py path/to/maven/project --format plantuml --outfile deps.puml
+python3 src/deps_graph.py path/to/maven/project --format plantuml --outfile deps.puml
 
 # Show artifactIds with group IDs
-python3 src/deps_tree.py path/to/maven/project --add-group-id
+python3 src/deps_graph.py path/to/maven/project --add-group-id
 
 # Only include specific groups
-python3 src/deps_tree.py path/to/maven/project --include-groups org.springframework com.example
+python3 src/deps_graph.py path/to/maven/project --include-groups org.springframework com.example
 
 # Exclude specific groups
-python3 src/deps_tree.py path/to/maven/project --exclude-groups org.apache.logging org.slf4j
+python3 src/deps_graph.py path/to/maven/project --exclude-groups org.apache.logging org.slf4j
 
 # Combine options
-python3 src/deps_tree.py path/to/maven/project --add-group-id --include-groups org.springframework --format json
+python3 src/deps_graph.py path/to/maven/project --add-group-id --include-groups org.springframework --format json
 
 # Output only module roots (modules with no incoming edges)
-python3 src/deps_tree.py path/to/maven/project --roots
+python3 src/deps_graph.py path/to/maven/project --roots
 
 # Output only module leaves (modules with no outgoing edges)
-python3 src/deps_tree.py path/to/maven/project --leaves
+python3 src/deps_graph.py path/to/maven/project --leaves
 
 # Show transitive dependencies of a module (use groupId:artifactId if --add-group-id was used)
-python3 src/deps_tree.py path/to/maven/project --dependencies example.org:test-mod-deps
+python3 src/deps_graph.py path/to/maven/project --dependencies example.org:test-mod-deps
 
 # Show transitive dependents (modules that (transitively) depend on MODULE)
-python3 src/deps_tree.py path/to/maven/project --dependents org.seleniumhq.selenium:selenium-java
+python3 src/deps_graph.py path/to/maven/project --dependents org.seleniumhq.selenium:selenium-java
 
 # Use flat output (newline list) instead of JSON tree
-python3 src/deps_tree.py path/to/maven/project --dependencies example.org:test-mod-deps --flat
-python3 src/deps_tree.py path/to/maven/project --dependents org.seleniumhq.selenium:selenium-java --flat
+python3 src/deps_graph.py path/to/maven/project --dependencies example.org:test-mod-deps --flat
+python3 src/deps_graph.py path/to/maven/project --dependents org.seleniumhq.selenium:selenium-java --flat
 ```
 
 To update parent versions across a directory of POMs:

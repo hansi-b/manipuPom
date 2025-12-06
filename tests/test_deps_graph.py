@@ -4,12 +4,12 @@ from pathlib import Path
 import json
 import pytest
 
-# Ensure src is on sys.path so we can import deps_tree
+# Ensure src is on sys.path so we can import deps_graph
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / 'src'
 sys.path.insert(0, str(SRC))
 
-import deps_tree as dt
+import deps_graph as dt
 import networkx as nx
 
 TEST_DATA = Path(__file__).resolve().parent / 'data'
