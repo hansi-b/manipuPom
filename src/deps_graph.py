@@ -129,21 +129,12 @@ def generate_json(G: nx.DiGraph) -> str:
     data = nx.readwrite.json_graph.node_link_data(G, edges="edges")
     return json.dumps(data, indent=2)
 
-def get_module_roots(G: nx.DiGraph) -> list[str]:
-    """Get all module roots (nodes with no incoming edges - no dependencies).
-    
-    Returns:
-        A sorted list of module names that have no dependencies in the graph.
+def get_filtered_nodes(G: nx.DiGraph, predicate) -> list[str]:
     """
-    return sorted(n for n in G.nodes if G.in_degree(n) == 0)
-
-def get_module_leaves(G: nx.DiGraph) -> list[str]:
-    """Get all module leaves (nodes with no outgoing edges - no dependents).
-    
     Returns:
-        A sorted list of module names that have no dependents in the graph.
-    """
-    return sorted(n for n in G.nodes if G.out_degree(n) == 0)
+        Sorted nodes in the graph filtered by the argument predicate function.
+    """ 
+    return sorted(n for n in G.nodes if predicate(n))
 
 def get_transitive_dependencies(G: nx.DiGraph, module: str) -> list[str]:
     """Get all transitive dependencies of a given module.
@@ -244,11 +235,11 @@ def main():
     
     if args.roots:
         # Output only the module roots
-        roots = get_module_roots(G)
+        roots = get_filtered_nodes(G, lambda n: G.in_degree(n) == 0)
         output = "\n".join(roots)
     elif args.leaves:
         # Output only the module leaves
-        leaves = get_module_leaves(G)
+        leaves = get_filtered_nodes(G, lambda n: G.out_degree(n) == 0)
         output = "\n".join(leaves)
     elif args.dependencies:
         # Output transitive dependencies as either JSON tree or flat list

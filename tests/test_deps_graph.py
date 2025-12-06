@@ -285,7 +285,7 @@ def test_get_module_roots():
     G = dt.build_dependency_graph(TEST_DATA)
     
     # Get module roots
-    roots = dt.get_module_roots(G)
+    roots = dt.get_filtered_nodes(G, lambda n: G.in_degree(n) == 0)
     
     # Verify that roots is a list
     assert isinstance(roots, list)
@@ -307,8 +307,8 @@ def test_get_module_roots():
 def test_get_module_roots_empty_graph():
     """Test getting module roots from an empty graph"""
     G = dt.build_dependency_graph(Path(__file__).resolve().parent / 'nonexistent')
-    roots = dt.get_module_roots(G)
-    
+    roots = dt.get_filtered_nodes(G, lambda n: G.in_degree(n) == 0)
+
     # Empty graph should have no roots
     assert roots == []
 
@@ -316,7 +316,7 @@ def test_get_module_roots_with_filtering():
     """Test getting module roots with group filtering applied"""
     # Build graph with group IDs included
     G = dt.build_dependency_graph(TEST_DATA, include_group_id=True)
-    roots = dt.get_module_roots(G)
+    roots = dt.get_filtered_nodes(G, lambda n: G.in_degree(n) == 0)
     
     # Verify roots are properly identified even with groupIds
     for root in roots:
@@ -331,7 +331,7 @@ def test_get_module_leaves():
     G = dt.build_dependency_graph(TEST_DATA)
     
     # Get module leaves
-    leaves = dt.get_module_leaves(G)
+    leaves = dt.get_filtered_nodes(G, lambda n: G.out_degree(n) == 0)
     
     # Verify that leaves is a list
     assert isinstance(leaves, list)
@@ -353,7 +353,7 @@ def test_get_module_leaves():
 def test_get_module_leaves_empty_graph():
     """Test getting module leaves from an empty graph"""
     G = dt.build_dependency_graph(Path(__file__).resolve().parent / 'nonexistent')
-    leaves = dt.get_module_leaves(G)
+    leaves = dt.get_filtered_nodes(G, lambda n: G.out_degree(n) == 0)
     
     # Empty graph should have no leaves
     assert leaves == []
@@ -362,7 +362,7 @@ def test_get_module_leaves_with_filtering():
     """Test getting module leaves with group filtering applied"""
     # Build graph with group IDs included
     G = dt.build_dependency_graph(TEST_DATA, include_group_id=True)
-    leaves = dt.get_module_leaves(G)
+    leaves = dt.get_filtered_nodes(G, lambda n: G.out_degree(n) == 0)
     
     # Verify leaves are properly identified even with groupIds
     for leaf in leaves:
