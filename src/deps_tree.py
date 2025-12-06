@@ -135,8 +135,7 @@ def get_module_roots(G: nx.DiGraph) -> list[str]:
     Returns:
         A sorted list of module names that have no dependencies in the graph.
     """
-    roots = [n for n in G.nodes if G.in_degree(n) == 0]
-    return sorted(roots)
+    return sorted(n for n in G.nodes if G.in_degree(n) == 0)
 
 def get_module_leaves(G: nx.DiGraph) -> list[str]:
     """Get all module leaves (nodes with no outgoing edges - no dependents).
@@ -144,8 +143,7 @@ def get_module_leaves(G: nx.DiGraph) -> list[str]:
     Returns:
         A sorted list of module names that have no dependents in the graph.
     """
-    leaves = [n for n in G.nodes if G.out_degree(n) == 0]
-    return sorted(leaves)
+    return sorted(n for n in G.nodes if G.out_degree(n) == 0)
 
 def get_transitive_dependencies(G: nx.DiGraph, module: str) -> list[str]:
     """Get all transitive dependencies of a given module.
@@ -160,10 +158,7 @@ def get_transitive_dependencies(G: nx.DiGraph, module: str) -> list[str]:
     if module not in G.nodes:
         return []
     
-    # Use NetworkX descendants to find all nodes reachable from the module
-    # (following the direction of edges, i.e., dependencies)
-    descendants = nx.descendants(G, module)
-    return sorted(list(descendants))
+    return sorted(nx.descendants(G, module))
 
 def get_transitive_dependencies_tree(G: nx.DiGraph, module: str) -> dict:
     """Return a nested dict representing the shortest-path dependency tree rooted at module.
@@ -200,10 +195,7 @@ def get_transitive_dependents(G: nx.DiGraph, module: str) -> list[str]:
     if module not in G.nodes:
         return []
     
-    # Use NetworkX ancestors to find all nodes that can reach the module
-    # (following the direction of edges backwards, i.e., dependents)
-    ancestors = nx.ancestors(G, module)
-    return sorted(list(ancestors))
+    return sorted(nx.ancestors(G, module))
 
 def get_transitive_dependents_tree(G: nx.DiGraph, module: str) -> dict:
     """Return a nested dict representing the shortest-path dependents tree rooted at module.
