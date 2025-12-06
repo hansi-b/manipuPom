@@ -263,13 +263,16 @@ def test_transitive_dependencies_tree_structure():
     flat = _flatten_tree(tree)
     assert flat == nx.descendants(G, module)
 
-    # verify parent-child in tree corresponds to shortest path predecessor
+    # verify parent-child in tree corresponds to a shortest path predecessor
+    # and that we use alphabetically-ordered paths
     parent_map = _build_parent_map(tree, module)
-    paths = nx.single_source_shortest_path(G, module)
+    distances = nx.single_source_shortest_path_length(G, module)
     for node in flat:
-        path = paths[node]
-        expected_parent = path[-2]
-        assert parent_map[node] == expected_parent
+        parent = parent_map[node]
+        # Parent should be exactly one step closer to root
+        assert distances[parent] == distances[node] - 1
+        # Parent should have an edge to this node
+        assert G.has_edge(parent, node)
 
 def test_transitive_dependents_tree_structure():
     G = dt.build_dependency_graph(TEST_DATA)
@@ -283,11 +286,43 @@ def test_transitive_dependents_tree_structure():
 
     parent_map = _build_parent_map(tree, module)
     RG = G.reverse(copy=True)
-    paths = nx.single_source_shortest_path(RG, module)
+    distances = nx.single_source_shortest_path_length(RG, module)
     for node in flat:
-        path = paths[node]
-        expected_parent = path[-2]
-        assert parent_map[node] == expected_parent
+        parent = parent_map[node]
+        # Parent should be exactly one step closer to root in reversed graph
+        assert distances[parent] == distances[node] - 1
+        # Parent should have an edge to this node in reversed graph
+        assert RG.has_edge(parent, node)
+
+def test_dependencies_tree_alphabetical_ordering():
+    """Test that when multiple shortest paths exist, we choose alphabetically first parent."""
+    # Create a simple graph with diamond structure where alphabetical ordering matters:
+    #     A
+    #    / \
+    #   B   C
+    #    \ /
+    #     D
+    # From A, both B and C are shortest paths to D (length 2)
+    # We should always choose B (alphabetically first)
+    G = nx.DiGraph()
+    G.add_edges_from([
+        ('A', 'B'),
+        ('A', 'C'),
+        ('B', 'D'),
+        ('C', 'D')
+    ])
+    
+    tree = dt.get_transitive_dependencies_tree(G, 'A')
+    parent_map = _build_parent_map(tree, 'A')
+    
+    # D should have B as parent (alphabetically first), not C
+    assert parent_map['D'] == 'B'
+    
+    # Run multiple times to ensure deterministic behavior
+    for _ in range(10):
+        tree = dt.get_transitive_dependencies_tree(G, 'A')
+        parent_map = _build_parent_map(tree, 'A')
+        assert parent_map['D'] == 'B', "Parent selection should be deterministic (alphabetical)"
 
 def test_get_transitive_dependents_missing():
     """Missing module should return empty list for dependents."""

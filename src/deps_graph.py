@@ -194,15 +194,39 @@ def get_transitive_dependencies_tree(G: nx.DiGraph, module: str, all_paths: bool
             return result
         return build_all_paths(module)
     else:
-        # Original behavior: shortest path only
-        paths = nx.single_source_shortest_path(G, module)
-        # build children mapping: parent -> set(children)
-        children = {n: set() for n in paths}
-        for node, path in paths.items():
+        # Shortest path only, with deterministic (alphabetical) ordering
+        # Use BFS with alphabetical ordering to ensure we always pick the alphabetically first path
+        from collections import deque
+        
+        # First, compute shortest distances using BFS
+        distances = {module: 0}
+        parents_by_dist = {module: []}  # Track all nodes at each distance that could be parents
+        queue = deque([module])
+        
+        while queue:
+            current = queue.popleft()
+            current_dist = distances[current]
+            
+            # Process successors in sorted order for deterministic behavior
+            for next_node in sorted(G.successors(current)):
+                if next_node not in distances:
+                    distances[next_node] = current_dist + 1
+                    parents_by_dist[next_node] = [current]
+                    queue.append(next_node)
+                elif distances[next_node] == current_dist + 1:
+                    # Same distance: could be an alternative shortest path parent
+                    parents_by_dist[next_node].append(current)
+        
+        # Now build the tree, choosing alphabetically first parent for each node
+        # (this ensures deterministic behavior when there are multiple shortest paths)
+        children = {n: set() for n in distances}
+        for node in distances:
             if node == module:
                 continue
-            parent = path[-2]
-            children[parent].add(node)
+            # Choose the alphabetically first parent among all shortest path parents
+            if parents_by_dist[node]:
+                parent = min(parents_by_dist[node])
+                children[parent].add(node)
 
         def build(node):
             return {child: build(child) for child in sorted(children.get(node, []))}
