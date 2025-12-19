@@ -129,6 +129,53 @@ def generate_json(G: nx.DiGraph) -> str:
     data = nx.readwrite.json_graph.node_link_data(G, edges="edges")
     return json.dumps(data, indent=2)
 
+def minimal_subgraph_for_artifacts(G: nx.DiGraph, artifacts: list[str]) -> nx.DiGraph:
+    """Compute the minimal subgraph containing the given artifacts and the
+    intermediate nodes on shortest paths connecting them.
+
+    This uses directed shortest paths along dependency edges, connecting any
+    pair where a path exists. Only dependency chains are included; dependents
+    are not introduced as connectors.
+
+    Args:
+        G: The full dependency graph (directed)
+        artifacts: List of artifact node names to connect
+
+    Returns:
+        A DiGraph containing all artifacts and edges along the union of
+        shortest paths between every pair of artifacts (if paths exist).
+    """
+    # Validate presence
+    missing = [a for a in artifacts if a not in G]
+    if missing:
+        raise ValueError(f"Artifacts not found in graph: {', '.join(missing)}")
+
+    H = nx.DiGraph()
+    H.add_nodes_from(artifacts)
+
+    if len(artifacts) <= 1:
+        return H
+
+    # Consider ordered pairs to capture u->v and v->u paths independently
+    arts = list(dict.fromkeys(artifacts))
+    for u in arts:
+        for v in arts:
+            if u == v:
+                continue
+            try:
+                path = nx.shortest_path(G, source=u, target=v)
+            except (nx.NetworkXNoPath, nx.NodeNotFound):
+                continue
+            # Add nodes and edges along the directed path (but invert edge direction
+            # so edges point from dependency to dependent)
+            for n in path:
+                H.add_node(n)
+            for s, t in zip(path[:-1], path[1:]):
+                # Invert: dependency (t) -> dependent (s)
+                H.add_edge(t, s)
+
+    return H
+
 def get_filtered_nodes(G: nx.DiGraph, predicate) -> list[str]:
     """
     Returns:
@@ -259,14 +306,16 @@ def main():
     parser.add_argument("directory", help="Root directory to search for pom.xml files")
     parser.add_argument("--format", "-m", choices=["plantuml", "json"], default="plantuml",
                         help="Output format for the dependency graph (default: plantuml)")
+    parser.add_argument("--artifacts", metavar="LIST",
+                        help="Comma-separated list of artifacts; outputs minimal subgraph connecting them (shortest paths), in chosen --format")
     parser.add_argument("--roots", action="store_true",
                         help="Only output the module roots (modules with no dependencies), one per line")
     parser.add_argument("--leaves", action="store_true",
                         help="Only output the module leaves (modules with no dependents), one per line")
     parser.add_argument("--dependencies", metavar="MODULE",
-                        help="Output all transitive dependencies of the given module, one per line")
+                        help="Output all transitive dependencies of the given module")
     parser.add_argument("--dependents", metavar="MODULE",
-                        help="Output all transitive dependents of the given module, one per line")
+                        help="Output all transitive dependents of the given module")
     parser.add_argument("--flat", action="store_true",
                         help="When used with --dependencies or --dependents, output a flat newline-separated list instead of a JSON tree")
     parser.add_argument("--all-paths", action="store_true",
@@ -292,14 +341,24 @@ def main():
     
     print(f"Built dependency graph with {G.number_of_nodes()} nodes and {G.number_of_edges()} edges.")
     
-    if args.roots:
+    if args.artifacts:
+        # Build minimal subgraph connecting provided artifacts
+        artifacts = [a.strip() for a in args.artifacts.split(',') if a.strip()]
+        try:
+            H = minimal_subgraph_for_artifacts(G, artifacts)
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        if args.format == "plantuml":
+            output = generate_plant_uml(H)
+        else:
+            output = generate_json(H)
+    elif args.roots:
         # Output only the module roots
-        roots = get_filtered_nodes(G, lambda n: G.in_degree(n) == 0)
-        output = "\n".join(roots)
+        output = "\n".join(get_filtered_nodes(G, lambda n: G.in_degree(n) == 0))
     elif args.leaves:
         # Output only the module leaves
-        leaves = get_filtered_nodes(G, lambda n: G.out_degree(n) == 0)
-        output = "\n".join(leaves)
+        output = "\n".join(get_filtered_nodes(G, lambda n: G.out_degree(n) == 0))
     elif args.dependencies:
         # Output transitive dependencies as either JSON tree or flat list
         if args.dependencies not in G.nodes:

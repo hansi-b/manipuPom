@@ -47,6 +47,8 @@ This repository contains:
  - CLI options to list module roots/leaves and show transitive dependency/dependent trees.
    - `--roots` / `--leaves`: print modules with no incoming / no outgoing edges.
    - `--dependencies MODULE` / `--dependents MODULE`: print transitive dependencies or dependents for `MODULE`.
+  - Minimal subgraph for selected artifacts:
+    - `--artifacts A,B,C`: print the minimal subgraph containing the listed artifacts and intermediate connectors along the shortest directed dependency paths between them. Edges are inverted in this subgraph, i.e., they point from dependency → dependent.
 
 ### mod_parent.py
 
@@ -157,6 +159,30 @@ python3 src/deps_graph.py path/to/maven/project --dependents org.seleniumhq.sele
 python3 src/deps_graph.py path/to/maven/project --dependencies example.org:test-mod-deps --all-paths
 python3 src/deps_graph.py path/to/maven/project --dependents org.seleniumhq.selenium:selenium-java --all-paths
 ```
+
+##### Minimal Subgraph (`--artifacts`)
+
+The `--artifacts` option builds a minimal subgraph that includes:
+- All artifacts listed in the comma-separated argument.
+- Any intermediate nodes that lie on the shortest directed dependency paths connecting those artifacts.
+- Edges inverted relative to the full graph, so each edge points from dependency → dependent.
+
+Examples:
+
+```bash
+# Minimal subgraph connecting two internal modules
+python3 src/deps_graph.py path/to/maven/project --artifacts example.org:test-deps-graph-a,example.org:test-deps-graph-b --format plantuml
+
+# Minimal subgraph connecting a module to an external dependency, in JSON
+python3 src/deps_graph.py path/to/maven/project --artifacts example.org:test-deps-graph-a,net.sourceforge.htmlcleaner:htmlcleaner --format json
+
+# Write the PlantUML subgraph to a file
+python3 src/deps_graph.py path/to/maven/project --artifacts A,B,C --format plantuml --outfile subgraph.puml
+```
+
+Notes:
+- The subgraph only includes directed dependency chains (no upward “parent” connectors). If no path exists between a pair, those nodes remain in the subgraph without edges between them.
+- Output supports both `plantuml` and `json` via `--format`.
 
 #### Dependency Tree Output Format
 
