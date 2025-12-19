@@ -308,7 +308,7 @@ def main():
                         help="Output format for the dependency graph (default: plantuml)")
     # Mutually exclusive output modes
     group = parser.add_mutually_exclusive_group()
-    group.add_argument("--artifacts", metavar="LIST",
+    group.add_argument("--sub-graph", metavar="LIST",
                        help="Comma-separated list of artifacts; outputs minimal subgraph connecting them (shortest paths), in chosen --format")
     group.add_argument("--roots", action="store_true",
                        help="Only output the module roots (modules with no dependencies), one per line")

@@ -48,9 +48,9 @@ This repository contains:
    - `--roots` / `--leaves`: print modules with no incoming / no outgoing edges.
    - `--dependencies MODULE` / `--dependents MODULE`: print transitive dependencies or dependents for `MODULE`.
   - Minimal subgraph for selected artifacts:
-    - `--artifacts A,B,C`: print the minimal subgraph containing the listed artifacts and intermediate connectors along the shortest directed dependency paths between them.
+    - `--sub-graph A,B,C`: print the minimal subgraph containing the listed artifacts and intermediate connectors along the shortest directed dependency paths between them.
   - Mutually exclusive modes:
-    - The options `--roots`, `--leaves`, `--dependencies`, `--dependents`, and `--artifacts` are mutually exclusive. Specify at most one; if more than one is provided, the CLI will error and abort.
+    - The options `--roots`, `--leaves`, `--dependencies`, `--dependents`, and `--sub-graph` are mutually exclusive. Specify at most one; if more than one is provided, the CLI will error and abort.
 
 ### mod_parent.py
 
@@ -162,9 +162,9 @@ python3 src/deps_graph.py path/to/maven/project --dependencies example.org:test-
 python3 src/deps_graph.py path/to/maven/project --dependents org.seleniumhq.selenium:selenium-java --all-paths
 ```
 
-##### Minimal Subgraph (`--artifacts`)
+##### Minimal Subgraph (`--sub-graph`)
 
-The `--artifacts` option builds a minimal subgraph that includes:
+The `--sub-graph` option builds a minimal subgraph that includes:
 - All artifacts listed in the comma-separated argument.
 - Any intermediate nodes that lie on the shortest directed dependency paths connecting those artifacts.
 - Edges inverted relative to the full graph, so each edge points from dependency → dependent.
@@ -173,13 +173,13 @@ Examples:
 
 ```bash
 # Minimal subgraph connecting two internal modules
-python3 src/deps_graph.py path/to/maven/project --artifacts example.org:test-deps-graph-a,example.org:test-deps-graph-b --format plantuml
+python3 src/deps_graph.py path/to/maven/project --sub-graph example.org:test-deps-graph-a,example.org:test-deps-graph-b --format plantuml
 
 # Minimal subgraph connecting a module to an external dependency, in JSON
-python3 src/deps_graph.py path/to/maven/project --artifacts example.org:test-deps-graph-a,net.sourceforge.htmlcleaner:htmlcleaner --format json
+python3 src/deps_graph.py path/to/maven/project --sub-graph example.org:test-deps-graph-a,net.sourceforge.htmlcleaner:htmlcleaner --format json
 
 # Write the PlantUML subgraph to a file
-python3 src/deps_graph.py path/to/maven/project --artifacts A,B,C --format plantuml --outfile subgraph.puml
+python3 src/deps_graph.py path/to/maven/project --sub-graph A,B,C --format plantuml --outfile subgraph.puml
 ```
 
 Notes:
