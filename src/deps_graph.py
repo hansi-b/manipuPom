@@ -306,16 +306,18 @@ def main():
     parser.add_argument("directory", help="Root directory to search for pom.xml files")
     parser.add_argument("--format", "-m", choices=["plantuml", "json"], default="plantuml",
                         help="Output format for the dependency graph (default: plantuml)")
-    parser.add_argument("--artifacts", metavar="LIST",
-                        help="Comma-separated list of artifacts; outputs minimal subgraph connecting them (shortest paths), in chosen --format")
-    parser.add_argument("--roots", action="store_true",
-                        help="Only output the module roots (modules with no dependencies), one per line")
-    parser.add_argument("--leaves", action="store_true",
-                        help="Only output the module leaves (modules with no dependents), one per line")
-    parser.add_argument("--dependencies", metavar="MODULE",
-                        help="Output all transitive dependencies of the given module")
-    parser.add_argument("--dependents", metavar="MODULE",
-                        help="Output all transitive dependents of the given module")
+    # Mutually exclusive output modes
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--artifacts", metavar="LIST",
+                       help="Comma-separated list of artifacts; outputs minimal subgraph connecting them (shortest paths), in chosen --format")
+    group.add_argument("--roots", action="store_true",
+                       help="Only output the module roots (modules with no dependencies), one per line")
+    group.add_argument("--leaves", action="store_true",
+                       help="Only output the module leaves (modules with no dependents), one per line")
+    group.add_argument("--dependencies", metavar="MODULE",
+                       help="Output all transitive dependencies of the given module")
+    group.add_argument("--dependents", metavar="MODULE",
+                       help="Output all transitive dependents of the given module")
     parser.add_argument("--flat", action="store_true",
                         help="When used with --dependencies or --dependents, output a flat newline-separated list instead of a JSON tree")
     parser.add_argument("--all-paths", action="store_true",

@@ -48,7 +48,9 @@ This repository contains:
    - `--roots` / `--leaves`: print modules with no incoming / no outgoing edges.
    - `--dependencies MODULE` / `--dependents MODULE`: print transitive dependencies or dependents for `MODULE`.
   - Minimal subgraph for selected artifacts:
-    - `--artifacts A,B,C`: print the minimal subgraph containing the listed artifacts and intermediate connectors along the shortest directed dependency paths between them. Edges are inverted in this subgraph, i.e., they point from dependency → dependent.
+    - `--artifacts A,B,C`: print the minimal subgraph containing the listed artifacts and intermediate connectors along the shortest directed dependency paths between them.
+  - Mutually exclusive modes:
+    - The options `--roots`, `--leaves`, `--dependencies`, `--dependents`, and `--artifacts` are mutually exclusive. Specify at most one; if more than one is provided, the CLI will error and abort.
 
 ### mod_parent.py
 
