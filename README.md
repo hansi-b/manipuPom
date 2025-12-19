@@ -5,8 +5,10 @@
 [![Lint and unit tests](https://github.com/hansi-b/manipuPom/actions/workflows/lint_and_unit_tests.yml/badge.svg)](https://github.com/hansi-b/manipuPom/actions/workflows/lint_and_unit_tests.yml)
 
 
-Small utility to read and modify a Maven `pom.xml` using Python's
-`xml.etree.ElementTree`. It can also visualize dependency relationships across multiple Maven projects.
+A collection of small utilities around Maven:
+
+- Read, analyse and modify one or more Maven `pom.xml` files.
+- Read and summarise Maven build logs.
 
 This repository contains:
 
@@ -14,16 +16,15 @@ This repository contains:
   dependencies by `artifactId`, change the scope of dependencies, and optionally write changes back to the
   POM file. When writing, the script will automatically create a
   `.bak` backup of the original file.
-- `src/deps_graph.py` — Script to generate dependency graphs from Maven projects. It can analyze multiple
-  POM files in a directory structure and output the dependency relationships in either PlantUML or JSON format.
 - `src/mod_parent.py` — Script to update `<parent><version>` in multiple POM files. Works recursively and can
   update many POMs in place or perform a dry-run.
+- `src/deps_graph.py` — Script to generate dependency graphs from Maven projects. It can analyse multiple
+  POM files in a directory structure and output the dependency relationships in either PlantUML or JSON format.
 - `src/evaluate_mvn_builds.py` — Script to evaluate Maven build logs in a directory and produce a human-friendly report
   listing successful builds, failure groups, and unreadable/inconclusive logs.
-- `tests/` — pytest-based unit tests.
-- `tests/data/` — test data used by the test suite.
-- `requirements.txt` — development/test dependencies (currently
-  contains `pytest` and `networkx`).
+- `tests/` — pytest-based unit tests
+- `tests/data/` — test data used by the test suite
+- `requirements.txt` — development/test dependencies
 
 ## Features
 
@@ -332,13 +333,13 @@ JSON output includes counts first for easy consumption:
 ```
 ```
 
-Notes about behavior
+Notes about behaviour
 - The script uses namespace-aware matching. It detects the default
   namespace from the root tag so it will match `artifactId` elements
   that live in the same namespace.
 - Matching of `artifactId` is exact. If you want case-insensitive or
   substring matching, the script can be extended with flags to alter
-  matching behavior.
+  matching behaviour.
 - The `.bak` backup is created at `<pom-path>.bak`. If a `.bak` file
   already exists it will be overwritten.
 
