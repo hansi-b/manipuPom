@@ -343,9 +343,9 @@ def main():
     
     print(f"Built dependency graph with {G.number_of_nodes()} nodes and {G.number_of_edges()} edges.")
     
-    if args.artifacts:
+    if args.sub_graph:
         # Build minimal subgraph connecting provided artifacts
-        artifacts = [a.strip() for a in args.artifacts.split(',') if a.strip()]
+        artifacts = [a.strip() for a in args.sub_graph.split(',') if a.strip()]
         try:
             H = minimal_subgraph_for_artifacts(G, artifacts)
         except ValueError as e:
