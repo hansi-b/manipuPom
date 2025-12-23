@@ -304,8 +304,8 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description="Generate dependency relations graph from all pom.xml files in a directory.")
     parser.add_argument("directory", help="Root directory to search for pom.xml files")
-    parser.add_argument("--format", "-m", choices=["plantuml", "json"], default="plantuml",
-                        help="Output format for the dependency graph (default: plantuml)")
+    parser.add_argument("--format", "-m", choices=["json", "flat", "plantuml"], default="json",
+                        help="Output format for the dependency graph (default: json). Use 'flat' for newline lists where applicable.")
     # Mutually exclusive output modes
     graph_mode = parser.add_mutually_exclusive_group()
     graph_mode.add_argument("--sub-graph", metavar="LIST",
@@ -318,8 +318,6 @@ def main():
                        help="Output all transitive dependencies of the given module")
     graph_mode.add_argument("--dependents", metavar="MODULE",
                        help="Output all transitive dependents of the given module")
-    parser.add_argument("--flat", action="store_true",
-                        help="When used with --dependencies or --dependents, output a flat newline-separated list instead of a JSON tree")
     parser.add_argument("--all-paths", action="store_true",
                         help="When used with --dependencies or --dependents (without --flat), show all paths to each module in the tree, not just the shortest path")
     parser.add_argument("--outfile", "-f", help="If provided, write generated output to this file.")
@@ -366,7 +364,7 @@ def main():
         if args.dependencies not in G.nodes:
             print(f"Error: Module '{args.dependencies}' not found in the graph.", file=sys.stderr)
             sys.exit(1)
-        if args.flat:
+        if args.format == "flat":
             deps = get_transitive_dependencies(G, args.dependencies)
             output = "\n".join(deps)
         else:
@@ -378,7 +376,7 @@ def main():
         if args.dependents not in G.nodes:
             print(f"Error: Module '{args.dependents}' not found in the graph.", file=sys.stderr)
             sys.exit(1)
-        if args.flat:
+        if args.format == "flat":
             dependents = get_transitive_dependents(G, args.dependents)
             output = "\n".join(dependents)
         else:
