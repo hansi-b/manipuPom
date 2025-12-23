@@ -1,6 +1,6 @@
 from pathlib import Path
+import argparse
 import sys
-
 
 import networkx as nx
 
@@ -300,8 +300,7 @@ def get_transitive_dependents_tree(G: nx.DiGraph, module: str, all_paths: bool =
     """
     return get_transitive_dependencies_tree(G.reverse(copy=True), module, all_paths=all_paths)
 
-def main():
-    import argparse
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate dependency relations graph from all pom.xml files in a directory.")
     parser.add_argument("directory", help="Root directory to search for pom.xml files")
     parser.add_argument("--format", "-m", choices=["json", "flat", "plantuml"], default="json",
@@ -327,7 +326,10 @@ def main():
                         help="Only include artifacts from these groupIds. If not specified, include all groups.")
     parser.add_argument("--exclude-groups", nargs="+", metavar="GROUP_ID",
                         help="Exclude artifacts from these groupIds. Takes precedence over --include-groups.")
-    args = parser.parse_args()
+    return parser.parse_args()
+
+def main():
+    args = parse_args()
 
     # Convert groups to sets for efficient lookup
     included_groups = set(args.include_groups) if args.include_groups else None
