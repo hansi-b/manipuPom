@@ -52,6 +52,8 @@ This repository contains:
     - `--sub-graph A,B,C`: print the minimal subgraph containing the listed artifacts and intermediate connectors along the shortest directed dependency paths between them.
   - Mutually exclusive modes:
     - The options `--roots`, `--leaves`, `--dependencies`, `--dependents`, and `--sub-graph` are mutually exclusive. Specify at most one; if more than one is provided, the CLI will error and abort.
+  - JSON output for roots/leaves:
+    - When using `--roots` or `--leaves` with `--format json`, the script emits a flat JSON array of artifact node IDs.
 
 ### mod_parent.py
 

@@ -357,10 +357,20 @@ def main():
             output = generate_json(H)
     elif args.roots:
         # Output only the module roots
-        output = "\n".join(get_filtered_nodes(G, lambda n: G.in_degree(n) == 0))
+        roots = get_filtered_nodes(G, lambda n: G.in_degree(n) == 0)
+        if args.format == "json":
+            import json
+            output = json.dumps(roots, indent=2)
+        else:
+            output = "\n".join(roots)
     elif args.leaves:
         # Output only the module leaves
-        output = "\n".join(get_filtered_nodes(G, lambda n: G.out_degree(n) == 0))
+        leaves = get_filtered_nodes(G, lambda n: G.out_degree(n) == 0)
+        if args.format == "json":
+            import json
+            output = json.dumps(leaves, indent=2)
+        else:
+            output = "\n".join(leaves)
     elif args.dependencies:
         # Output transitive dependencies as either JSON tree or flat list
         if args.dependencies not in G.nodes:
