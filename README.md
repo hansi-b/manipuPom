@@ -48,6 +48,7 @@ This repository contains:
  - CLI options to list module roots/leaves and show transitive dependency/dependent trees.
    - `--roots` / `--leaves`: print modules with no incoming / no outgoing edges.
    - `--dependencies MODULE` / `--dependents MODULE`: print transitive dependencies or dependents for `MODULE`.
+    - PlantUML support: with `--format plantuml`, these modes render the corresponding tree as a directed graph suitable for PlantUML. The root `MODULE` is included, and edges follow the tree direction (dependencies: module → dependency; dependents: module → dependent).
   - Minimal subgraph for selected artifacts:
     - `--sub-graph A,B,C`: print the minimal subgraph containing the listed artifacts and intermediate connectors along the shortest directed dependency paths between them.
   - Mutually exclusive modes:

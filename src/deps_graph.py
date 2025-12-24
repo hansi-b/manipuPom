@@ -176,6 +176,42 @@ def minimal_subgraph_for_artifacts(G: nx.DiGraph, artifacts: list[str]) -> nx.Di
 
     return H
 
+def _tree_to_graph(root: str, tree: dict) -> nx.DiGraph:
+    """Convert a nested dict tree (as produced by dependency/dependent tree functions)
+    into a directed graph with edges parent -> child, including the root node.
+    """
+    H = nx.DiGraph()
+    H.add_node(root)
+
+    def rec(parent, subtree):
+        for child, sub in subtree.items():
+            H.add_node(child)
+            H.add_edge(parent, child)
+            if isinstance(sub, dict):
+                rec(child, sub)
+
+    rec(root, tree or {})
+    return H
+
+def build_dependencies_tree_graph(G: nx.DiGraph, module: str, all_paths: bool = False) -> nx.DiGraph:
+    """Build a directed graph representing the dependency tree of `module`.
+
+    Edges point from parent -> child along original dependency direction.
+    The graph includes `module` as the root.
+    """
+    tree = get_transitive_dependencies_tree(G, module, all_paths=all_paths)
+    return _tree_to_graph(module, tree)
+
+def build_dependents_tree_graph(G: nx.DiGraph, module: str, all_paths: bool = False) -> nx.DiGraph:
+    """Build a directed graph representing the dependents tree of `module`.
+
+    Uses the reversed graph so edges point from `module` to its (transitive) dependents,
+    mirroring the JSON dependents tree behavior. The graph includes `module` as the root.
+    """
+    RG = G.reverse(copy=True)
+    tree = get_transitive_dependencies_tree(RG, module, all_paths=all_paths)
+    return _tree_to_graph(module, tree)
+
 def get_filtered_nodes(G: nx.DiGraph, predicate) -> list[str]:
     """
     Returns:
@@ -379,6 +415,9 @@ def main():
         if args.format == "flat":
             deps = get_transitive_dependencies(G, args.dependencies)
             output = "\n".join(deps)
+        elif args.format == "plantuml":
+            H = build_dependencies_tree_graph(G, args.dependencies, all_paths=args.all_paths)
+            output = generate_plant_uml(H)
         else:
             import json
             tree = get_transitive_dependencies_tree(G, args.dependencies, all_paths=args.all_paths)
@@ -391,6 +430,9 @@ def main():
         if args.format == "flat":
             dependents = get_transitive_dependents(G, args.dependents)
             output = "\n".join(dependents)
+        elif args.format == "plantuml":
+            H = build_dependents_tree_graph(G, args.dependents, all_paths=args.all_paths)
+            output = generate_plant_uml(H)
         else:
             import json
             tree = get_transitive_dependents_tree(G, args.dependents, all_paths=args.all_paths)
